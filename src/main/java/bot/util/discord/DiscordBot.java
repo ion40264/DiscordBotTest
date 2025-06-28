@@ -3,8 +3,6 @@ package bot.util.discord;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.annotation.PostConstruct;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,15 +35,14 @@ public class DiscordBot {
 	@Autowired
 	private DiscoMemberRepository discoMemberRepository;
 
-	@PostConstruct
-	protected void init() {
+	public void init(DiscordBotModel discordBotModel) {
 		jda = JDABuilder.createDefault(System.getenv("DISCORD_BOT_TOKEN"))
 				.setRawEventsEnabled(true)
 				.setMemberCachePolicy(MemberCachePolicy.ALL)
 				.enableIntents(GatewayIntent.MESSAGE_CONTENT)
 				.enableIntents(GatewayIntent.GUILD_MESSAGES)
 				.enableIntents(GatewayIntent.GUILD_MEMBERS)
-				.addEventListeners(new DiscordBotModel())
+				.addEventListeners(discordBotModel)
 				.setActivity(Activity.playing("ステータス"))
 				.build();
 

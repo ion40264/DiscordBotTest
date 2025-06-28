@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import bot.model.discord.DiscordBotModel;
 import bot.util.discord.DiscordBot;
 import bot.util.prop.AppriCationProperties;
 
@@ -16,11 +17,13 @@ public class StartupRunner implements CommandLineRunner {
 	AppriCationProperties appriCationProperties;
 
 	@Autowired
+	private DiscordBotModel discordBotModel;
+	@Autowired
 	private DiscordBot discordBot;
 
 	@Override
 	public void run(String... args) throws Exception {
-//		memberDtoList = discordBot.getMemberDtoList();
+		discordBot.init(discordBotModel);
 		log.info("初期起動完了");
 	}
 
