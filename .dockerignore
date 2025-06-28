@@ -1,0 +1,21 @@
+# Git関連
+.git
+.gitignore
+
+# IDE関連
+.idea/
+.vscode/
+
+# ビルド成果物 (Maven/Gradleなど)
+target/
+build/
+
+# 依存関係管理ツールが生成するファイル
+node_modules/
+vendor/
+
+# その他のローカルファイル
+*.log
+tmp/
+*.iml
+.DS_Store
