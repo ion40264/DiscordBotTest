@@ -51,6 +51,7 @@ public class DiscordBotModel extends ListenerAdapter {
 			String url = attachment.getUrl();
 			log.info(url);
 		}
+		log.info("messageid="+ event.getMessage().getId());
 		String message = event.getMessage().getContentRaw();
 		String effectiveName = member.getEffectiveName();
 		if (nickname == null) {
