@@ -30,6 +30,9 @@ public class DiscordBotModel extends ListenerAdapter {
 	private DiscordBot discordBot;
 
 
+	public void sendMessage(String message) {
+		discordBot.sendMessage(message);
+	}
 
 	@Override
 	public void onGuildMemberJoin(GuildMemberJoinEvent event) {
