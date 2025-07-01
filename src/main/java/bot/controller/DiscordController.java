@@ -8,12 +8,12 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import bot.form.DiscordForm;
-import bot.util.discord.DiscordBot;
+import bot.model.discord.DiscordBotModel;
 
 @Controller
 public class DiscordController {
 	@Autowired
-	private DiscordBot discordBot;
+	private DiscordBotModel discordBotModel;
 	
 	@GetMapping("/discord")
 	public String getDisco(Model model) {
@@ -22,7 +22,7 @@ public class DiscordController {
 
 	@PostMapping("/discord")
 	public String postDisco(@ModelAttribute DiscordForm discordForm) {
-		discordBot.sendMessage(discordForm.getMessage());
+		discordBotModel.sendMessage(discordForm.getMessage());
         return "redirect:/discord";
 	}
 
