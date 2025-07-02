@@ -12,6 +12,7 @@ import org.kohsuke.github.GHRef;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
+import org.kohsuke.github.HttpException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,19 +95,19 @@ public class Git {
 
 	/**
 	 * 
+	 * @param issueDto IssueDtoでなくてもいいかもしんない
 	 * @param headBranch 自分が編集していたブランチ名 feature#1等
 	 * @param baseBranch 適用したいブランチ main等
-	 * @param title
 	 * @param body
 	 * @return
 	 * @throws Exception
 	 */
 	public String createPullRequest(IssueDto issueDto, String headBranch, String baseBranch, String body)
 			throws Exception {
-		if (existBranch(headBranch)) {
+		if (!existBranch(headBranch)) {
 			throw new Exception("ブランチが存在しません headBranch=" + headBranch);
 		}
-		if (existBranch(headBranch)) {
+		if (!existBranch(headBranch)) {
 			throw new Exception("ブランチが存在しません baseBranch=" + baseBranch);
 		}
 		GHPullRequest pullRequest;
@@ -114,17 +115,20 @@ public class Git {
 			pullRequest = ghRepository.createPullRequest("Re:" + issueDto.getTitle(), headBranch, baseBranch, body);
 		} catch (IOException e) {
 			log.error("プルリクエストの作成に失敗しました。", e);
+			if (e instanceof HttpException) {
+				throw new Exception("プルリクエストの作成に失敗しました。" + ((HttpException) e).getMessage(), e);
+			}
 			throw new Exception("プルリクエストの作成に失敗しました。", e);
 		}
-		return pullRequest.getUrl().toString();
+		return pullRequest.getHtmlUrl().toString();
 	}
 
 	public String createPullRequest(IssueDto issueDto, String headBranch, String baseBranch) throws Exception {
-		return createPullRequest(issueDto, headBranch, baseBranch, issueDto.getTitle());
+		return createPullRequest(issueDto, headBranch, baseBranch, "「"+issueDto.getTitle() + "」のレビュー、マージをお願いします。");
 	}
 
 	public String createPullRequest(IssueDto issueDto, String headBranch) throws Exception {
-		return createPullRequest(issueDto, headBranch, "main", issueDto.getTitle());
+		return createPullRequest(issueDto, headBranch, "main");
 	}
 
 	private boolean existBranch(String branchName) {

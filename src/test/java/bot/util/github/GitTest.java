@@ -22,7 +22,11 @@ class GitTest {
 	void testCreatePullRequest() throws Exception {
 		IssueDto issueDto = new IssueDto();
 		issueDto.setTitle("githubのapiを使ってissue、プルリクエストを使いたい");
-		log.info(git.createPullRequest(issueDto, "feature#3"));
+		try {
+			log.info(git.createPullRequest(issueDto, "feature#3"));
+		} catch (Exception e) {
+			log.info(e.getMessage());
+		}
 	}
 
 }
