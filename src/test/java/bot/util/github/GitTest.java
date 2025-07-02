@@ -14,12 +14,15 @@ class GitTest {
 
 	@Test
 	void testCreateIssue() throws Exception {
-		log.info(git.createIssue("MemberDtoのメンバー情報が分かりずらい。コメントをいれてほしい"));
+		log.info(git.createIssue("MemberDtoのメンバー情報が分かりずらい。コメントをいれてほしい").getTitle());
 		log.info(git.getBranches());
 	}
 
 	@Test
-	void testCreatePullRequest() {
+	void testCreatePullRequest() throws Exception {
+		IssueDto issueDto = new IssueDto();
+		issueDto.setTitle("githubのapiを使ってissue、プルリクエストを使いたい");
+		log.info(git.createPullRequest(issueDto, "feature#3"));
 	}
 
 }

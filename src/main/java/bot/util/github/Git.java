@@ -38,19 +38,19 @@ public class Git {
 	}
 
 	/**
-	 * Issueを作ってIssueのURLを返す。
+	 * Issueを作ってIssueのDTOを返す。
 	 * @param title タイトル
 	 * @param body 本文
 	 * @param targetBranch どのブランチに対するIssueか？デフォルトはmain
-	 * @return url もしくはエラー文字
-	 * @throws IOException 
+	 * @return IssueDto
+	 * @throws Exception 
 	 */
-	public String createIssue(String title, String body, String targetBranch) throws IOException {
+	public IssueDto createIssue(String title, String body, String targetBranch) throws Exception {
 		GHBranch ghBranch;
 		try {
 			ghBranch = ghRepository.getBranch(targetBranch);
 		} catch (IOException e) {
-			return "targetBranchがありません。" + getBranches();
+			throw new Exception("targetBranchがありません。" + getBranches(), e);
 		}
 		try {
 			title += " 対象ブランチ:" + ghBranch.getName();
@@ -60,23 +60,21 @@ public class Git {
 			int number = ghIssue.getNumber();
 
 			String baseBranchSha = ghRepository.getRef("heads/" + targetBranch).getObject().getSha();
-			GHRef newBranchRef = ghRepository.createRef("refs/heads/" + "feature#" + number, baseBranchSha);
+			GHRef ghRef = ghRepository.createRef("refs/heads/" + "feature#" + number, baseBranchSha);
 
-			Map<String, GHBranch> branches = ghRepository.getBranches();
-			String branchNames = "存在するブランチ名:";
-			for (Entry<String, GHBranch> entry : branches.entrySet()) {
-				branchNames += entry.getKey() + ", ";
-			}
-			log.info("number=" + number);
+			IssueDto issueDto = new IssueDto();
+			issueDto.setBody(body);
+			issueDto.setBranchName("feature#" + number);
+			issueDto.setTitle(title);
+			issueDto.setIssueUrl(ghRef.getUrl().toString());
 
-			
-			return ghIssue.getTitle() + "#" + number;
+			return issueDto;
 		} catch (IOException e) {
 			log.error("issueの作成に失敗しました", e);
-			return "issueの作成に失敗しました";
+			throw new Exception("issueの作成に失敗しました", e);
 		}
 	}
-	
+
 	public String getBranches() throws IOException {
 		Map<String, GHBranch> branches = ghRepository.getBranches();
 		String branchNames = "存在するブランチ名:";
@@ -86,20 +84,55 @@ public class Git {
 		return branchNames;
 	}
 
-	public String createIssue(String title) throws IOException {
+	public IssueDto createIssue(String title) throws Exception {
 		return createIssue(title, title, "main");
 	}
 
-	public String createIssue(String title, String targetBranch) throws IOException {
+	public IssueDto createIssue(String title, String targetBranch) throws Exception {
 		return createIssue(title, title, targetBranch);
 	}
 
-	public GHPullRequest createPullRequest(String headBranch, String baseBranch, String title, String body)
+	/**
+	 * 
+	 * @param headBranch 自分が編集していたブランチ名 feature#1等
+	 * @param baseBranch 適用したいブランチ main等
+	 * @param title
+	 * @param body
+	 * @return
+	 * @throws Exception
+	 */
+	public String createPullRequest(IssueDto issueDto, String headBranch, String baseBranch, String body)
 			throws Exception {
-		// head: 変更が含まれるブランチ (例: feature-branch)
-		// base: 変更をマージしたいブランチ (例: main, develop)
-		GHPullRequest pullRequest = ghRepository.createPullRequest(title, headBranch, baseBranch, body);
-		System.out.println("プルリクエストが作成されました: " + pullRequest.getHtmlUrl());
-		return pullRequest;
+		if (existBranch(headBranch)) {
+			throw new Exception("ブランチが存在しません headBranch=" + headBranch);
+		}
+		if (existBranch(headBranch)) {
+			throw new Exception("ブランチが存在しません baseBranch=" + baseBranch);
+		}
+		GHPullRequest pullRequest;
+		try {
+			pullRequest = ghRepository.createPullRequest("Re:" + issueDto.getTitle(), headBranch, baseBranch, body);
+		} catch (IOException e) {
+			log.error("プルリクエストの作成に失敗しました。", e);
+			throw new Exception("プルリクエストの作成に失敗しました。", e);
+		}
+		return pullRequest.getUrl().toString();
+	}
+
+	public String createPullRequest(IssueDto issueDto, String headBranch, String baseBranch) throws Exception {
+		return createPullRequest(issueDto, headBranch, baseBranch, issueDto.getTitle());
+	}
+
+	public String createPullRequest(IssueDto issueDto, String headBranch) throws Exception {
+		return createPullRequest(issueDto, headBranch, "main", issueDto.getTitle());
+	}
+
+	private boolean existBranch(String branchName) {
+		try {
+			ghRepository.getBranch(branchName);
+			return true;
+		} catch (IOException e) {
+			return false;
+		}
 	}
 }
