@@ -89,6 +89,11 @@
 			<version>1.321</version>
 		</dependency>
 		<dependency>
+			<groupId>org.eclipse.jgit</groupId>
+			<artifactId>org.eclipse.jgit</artifactId>
+			<version>7.3.0.202506031305-r</version>
+		</dependency>
+		<dependency>
 			<groupId>com.google.apis</groupId>
 			<artifactId>google-api-services-sheets</artifactId>
 			<version>v4-rev20250603-2.0.0</version> <!-- 最新バージョンを確認してください -->

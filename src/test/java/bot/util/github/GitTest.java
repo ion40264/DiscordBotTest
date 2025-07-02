@@ -14,7 +14,8 @@ class GitTest {
 
 	@Test
 	void testCreateIssue() throws Exception {
-		log.info(git.createIssue("タイトルテスト", "内容テスト", "issue#3"));
+//		log.info(git.createIssue("タイトルテスト", "内容テスト", "feature#3"));
+		log.info(git.getBranches());
 	}
 
 	@Test

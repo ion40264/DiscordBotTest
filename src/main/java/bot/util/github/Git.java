@@ -8,6 +8,7 @@ import org.kohsuke.github.GHBranch;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueBuilder;
 import org.kohsuke.github.GHPullRequest;
+import org.kohsuke.github.GHRef;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
@@ -45,27 +46,52 @@ public class Git {
 	 * @throws IOException 
 	 */
 	public String createIssue(String title, String body, String targetBranch) throws IOException {
-		GHIssueBuilder issue = ghRepository.createIssue(title);
+		GHBranch ghBranch;
 		try {
-			GHBranch ghBranch = ghRepository.getBranch(targetBranch);
+			ghBranch = ghRepository.getBranch(targetBranch);
 		} catch (IOException e) {
-			Map<String,GHBranch> branches = ghRepository.getBranches();
-			String branchNames = "存在するブランチ名:";
-			for(Entry<String, GHBranch> entry : branches.entrySet()) {
-				branchNames += entry.getKey() + ", ";
-			}
-			return "targetBranchがありません。"+branchNames;
+			return "targetBranchがありません。" + getBranches();
 		}
 		try {
-			issue.body(body).create();
+			title += " 対象ブランチ:" + ghBranch.getName();
+			GHIssueBuilder issue = ghRepository.createIssue(title);
+			issue.body(body);
 			GHIssue ghIssue = issue.create();
-			String nodeId = ghIssue.getNodeId();
-			log.info("nodeId=" + nodeId);
-			return ghIssue.getTitle();
+			int number = ghIssue.getNumber();
+
+			String baseBranchSha = ghRepository.getRef("heads/" + targetBranch).getObject().getSha();
+			GHRef newBranchRef = ghRepository.createRef("refs/heads/" + "feature#" + number, baseBranchSha);
+
+			Map<String, GHBranch> branches = ghRepository.getBranches();
+			String branchNames = "存在するブランチ名:";
+			for (Entry<String, GHBranch> entry : branches.entrySet()) {
+				branchNames += entry.getKey() + ", ";
+			}
+			log.info("number=" + number);
+
+			
+			return ghIssue.getTitle() + "#" + number;
 		} catch (IOException e) {
 			log.error("issueの作成に失敗しました", e);
 			return "issueの作成に失敗しました";
 		}
+	}
+	
+	public String getBranches() throws IOException {
+		Map<String, GHBranch> branches = ghRepository.getBranches();
+		String branchNames = "存在するブランチ名:";
+		for (Entry<String, GHBranch> entry : branches.entrySet()) {
+			branchNames += entry.getKey() + ", ";
+		}
+		return branchNames;
+	}
+
+	public String createIssue(String title) throws IOException {
+		return createIssue(title, title, "main");
+	}
+
+	public String createIssue(String title, String targetBranch) throws IOException {
+		return createIssue(title, title, targetBranch);
 	}
 
 	public GHPullRequest createPullRequest(String headBranch, String baseBranch, String title, String body)
