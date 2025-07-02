@@ -14,7 +14,7 @@ class GitTest {
 
 	@Test
 	void testCreateIssue() throws Exception {
-//		log.info(git.createIssue("タイトルテスト", "内容テスト", "feature#3"));
+		log.info(git.createIssue("MemberDtoのメンバー情報が分かりずらい。コメントをいれてほしい"));
 		log.info(git.getBranches());
 	}
 
