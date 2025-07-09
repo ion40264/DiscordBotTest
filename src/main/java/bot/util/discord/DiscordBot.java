@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import bot.dto.MemberDto;
 import bot.entity.DiscoMember;
+import bot.model.discord.DiscordBotModel;
 import bot.repository.DiscoMemberRepository;
 import bot.util.prop.AppriCationProperties;
 import net.dv8tion.jda.api.JDA;
@@ -19,7 +20,6 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 
@@ -28,7 +28,6 @@ public class DiscordBot {
 	private static final Logger log = LoggerFactory.getLogger(DiscordBot.class);
 	private JDA jda;
 	private TextChannel textChannel;
-	private TextChannel webTextChannel;
 	private Guild guild;
 	private List<MemberDto> memberDtoList = new ArrayList<>();
 	@Autowired
@@ -36,18 +35,16 @@ public class DiscordBot {
 	@Autowired
 	private DiscoMemberRepository discoMemberRepository;
 
-	public void init(List<ListenerAdapter> listenerAdapterList) {
+	public void init(DiscordBotModel discordBotModel) {
 		jda = JDABuilder.createDefault(System.getenv("DISCORD_BOT_TOKEN"))
 				.setRawEventsEnabled(true)
 				.setMemberCachePolicy(MemberCachePolicy.ALL)
 				.enableIntents(GatewayIntent.MESSAGE_CONTENT)
 				.enableIntents(GatewayIntent.GUILD_MESSAGES)
 				.enableIntents(GatewayIntent.GUILD_MEMBERS)
+				.addEventListeners(discordBotModel)
 				.setActivity(Activity.playing("ステータス"))
 				.build();
-		for (ListenerAdapter listenerAdapter : listenerAdapterList) {
-			jda.addEventListener(listenerAdapter);
-		}
 
 		jda.updateCommands().queue();
 		try {
@@ -58,7 +55,6 @@ public class DiscordBot {
 
 		guild = jda.getGuildById(appriCationProperties.getGuildId());
 		textChannel = guild.getTextChannelById(appriCationProperties.getChannelId());
-		webTextChannel = guild.getTextChannelById(appriCationProperties.getWebChannelId());
 
 		getGuild().loadMembers().onSuccess(members -> {
 			if (members.isEmpty()) {
@@ -110,22 +106,11 @@ public class DiscordBot {
 	public TextChannel getTextChannel() {
 		return textChannel;
 	}
-
-	public TextChannel getWebTextChannel() {
-		return webTextChannel;
-	}
 	
 	public void sendMessage(String message) {
 		textChannel.sendMessage(message).complete();
 	}
 	public List<MemberDto> getMemberDtoList() {
 		return memberDtoList;
-	}
-	public MemberDto getMemberDto(String discordMemberId) {
-		for (MemberDto memberDto : memberDtoList) {
-			if (memberDto.getMemeber().getId().equals(discordMemberId))
-				return memberDto;
-		}
-		return null;
 	}
 }

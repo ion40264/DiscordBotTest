@@ -6,7 +6,6 @@ import net.dv8tion.jda.api.entities.Member;
 @Data
 public class MemberDto {
 	private Long id;
-	private String discordMemberId;
 	// Discord APIのDiscordメンバー
 	private Member memeber;
 	// Discordのメンバーのニックネーム
