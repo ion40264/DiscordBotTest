@@ -1,4 +1,4 @@
-package bot.model.discord;
+package bot.service;
 
 import java.util.List;
 import java.util.Optional;
@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import bot.dto.MemberDto;
 import bot.entity.DiscoMember;
@@ -20,16 +20,14 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
-@Component
-public class DiscordBotModel extends ListenerAdapter {
-	private static final Logger log = LoggerFactory.getLogger(DiscordBotModel.class);
+@Service
+public class DiscordBotService extends ListenerAdapter {
+	private static final Logger log = LoggerFactory.getLogger(DiscordBotService.class);
 
 	@Autowired
 	private DiscoMemberRepository discoMemberRepository;
 	@Autowired
 	private DiscordBot discordBot;
-
-
 
 	@Override
 	public void onGuildMemberJoin(GuildMemberJoinEvent event) {
@@ -89,5 +87,9 @@ public class DiscordBotModel extends ListenerAdapter {
 	@Override
 	public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
 
+	}
+	
+	public void sendMessage(String message) {
+		discordBot.sendMessage(message);
 	}
 }
