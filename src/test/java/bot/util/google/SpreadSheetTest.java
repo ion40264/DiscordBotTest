@@ -16,8 +16,6 @@ import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.RowData;
 import com.google.api.services.sheets.v4.model.UpdateCellsRequest;
 
-import bot.model.google.SpreadSheetModel;
-
 @SpringBootTest
 class SpreadSheetTest {
 	@Autowired
@@ -26,9 +24,7 @@ class SpreadSheetTest {
 
 	@Test
 	void testWriteSpreadSheat() throws Exception{
-		SpreadSheetModel s = new SpreadSheetModel();
 		Sheets sheets = spreadSheet.getSpreadsheets();
-		Request request = new Request();
 		CellFormat format = new CellFormat();
 		Color color = new Color();
 		color.setRed(1f); //R(レッド)
