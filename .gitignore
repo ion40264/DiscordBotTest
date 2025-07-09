@@ -33,3 +33,4 @@ build/
 
 app.jar
 sqlite.db
+node_modules
