@@ -12,6 +12,8 @@ public class AppriCationProperties {
 	private String guildId;
 	@Value("${discord.channel-id}")
 	private String channelId;
+	@Value("${discord.web-channel-id}")
+	private String webChannelId;
 	@Value("${github.repository-name}")
 	private String githubRepositoryName;
 }
