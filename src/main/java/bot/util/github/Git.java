@@ -30,7 +30,7 @@ public class Git {
 	public void init() {
 		try {
 			// 環境変数FINE-GRAINED PERSONAL ACCESS TOKENSにFine-grained personal access tokensが必要
-			GitHub github = new GitHubBuilder().withOAuthToken(System.getenv("FINE-GRAINED PERSONAL ACCESS TOKENS"))
+			GitHub github = new GitHubBuilder().withOAuthToken(System.getenv("FINE_GRAINED_PERSONAL_ACCESS_TOKENS"))
 					.build();
 			ghRepository = github.getRepository(appriCationProperties.getGithubRepositoryName());
 		} catch (IOException e) {
