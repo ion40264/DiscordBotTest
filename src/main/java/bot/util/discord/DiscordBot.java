@@ -1,5 +1,6 @@
 package bot.util.discord;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,8 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import bot.dto.MemberDto;
-import bot.entity.DiscoMember;
-import bot.repository.DiscoMemberRepository;
+import bot.entity.AllianceMember;
+import bot.repository.AllianceMemberRepository;
 import bot.util.prop.AppriCationProperties;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -21,6 +22,8 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
+import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 
 @Component
@@ -34,9 +37,9 @@ public class DiscordBot {
 	@Autowired
 	private AppriCationProperties appriCationProperties;
 	@Autowired
-	private DiscoMemberRepository discoMemberRepository;
+	private AllianceMemberRepository discoMemberRepository;
 
-	public void init(List<ListenerAdapter> listenerAdapterList) {
+	public void init(ListenerAdapter listenerAdapter) {
 		jda = JDABuilder.createDefault(System.getenv("DISCORD_BOT_TOKEN"))
 				.setRawEventsEnabled(true)
 				.setMemberCachePolicy(MemberCachePolicy.ALL)
@@ -45,9 +48,7 @@ public class DiscordBot {
 				.enableIntents(GatewayIntent.GUILD_MEMBERS)
 				.setActivity(Activity.playing("ステータス"))
 				.build();
-		for (ListenerAdapter listenerAdapter : listenerAdapterList) {
-			jda.addEventListener(listenerAdapter);
-		}
+		jda.addEventListener(listenerAdapter);
 
 		jda.updateCommands().queue();
 		try {
@@ -75,16 +76,16 @@ public class DiscordBot {
 					nickname = effectiveName;
 				} else {
 				}
-				DiscoMember discoMember = discoMemberRepository.findByName(nickname);
-				if (discoMember == null) {
-					discoMember = new DiscoMember();
-					discoMember.setName(nickname);
-					discoMember.setMcount(0);
-					discoMemberRepository.save(discoMember);
+				AllianceMember allianceMember = discoMemberRepository.findByDiscordName(nickname);
+				if (allianceMember == null) {
+					allianceMember = new AllianceMember();
+					allianceMember.setDiscordName(nickname);
+					allianceMember.setStatementCount(0);
+					discoMemberRepository.save(allianceMember);
 				}
-				memberDto.setId(discoMember.getId());
-				memberDto.setCount(discoMember.getMcount());
-				memberDto.setNickname(nickname);
+				memberDto.setId(allianceMember.getId());
+				memberDto.setCount(allianceMember.getStatementCount());
+				memberDto.setDiscordName(nickname);
 
 				memberDtoList.add(memberDto);
 				log.info("メンバー:" + nickname);
@@ -102,7 +103,7 @@ public class DiscordBot {
 		}
 		log.info("Discordメンバー取得完了");
 	}
-	
+
 	public Guild getGuild() {
 		return guild;
 	}
@@ -114,13 +115,23 @@ public class DiscordBot {
 	public TextChannel getWebTextChannel() {
 		return webTextChannel;
 	}
-	
-	public void sendMessage(String message) {
-		textChannel.sendMessage(message).complete();
+
+	public void sendMessage(String name, String message, String referencedMessageId, InputStream inputStream, String fileName) {
+		sendMessage(name.trim() + "さんの発言：\n" + message, referencedMessageId, inputStream, fileName);
 	}
+	public void sendMessage(String message, String referencedMessageId, InputStream inputStream, String fileName) {
+		MessageCreateAction messageCreateAction = getWebTextChannel().sendMessage(message);
+		if (referencedMessageId != null && !referencedMessageId.isEmpty())
+			messageCreateAction.setMessageReference(referencedMessageId.trim());
+		if (inputStream != null) 
+			messageCreateAction.setFiles(FileUpload.fromData(inputStream, fileName));
+		messageCreateAction.queue();
+	}
+
 	public List<MemberDto> getMemberDtoList() {
 		return memberDtoList;
 	}
+
 	public MemberDto getMemberDto(String discordMemberId) {
 		for (MemberDto memberDto : memberDtoList) {
 			if (memberDto.getMemeber().getId().equals(discordMemberId))

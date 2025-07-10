@@ -9,10 +9,14 @@ import lombok.Data;
 
 @Data
 @Entity
-public class DiscoMember {
+public class AllianceMember {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	private String name;
-	private Integer mcount;
+	private String discordMemberId;
+	private String discordName;
+	private String ayarabuId;
+	private String ayarabuName;
+	private Integer statementCount;
+	private String createDate;
 }
