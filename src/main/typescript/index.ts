@@ -12,97 +12,100 @@ interface ChatMessage {
 	attachmentUrlList: string[];
 	createDate: string;
 }
+interface MessageSize {
+	size: number;
+}
 
 // --- 2. DOM要素の取得 ---
 // データを表示するコンテナ要素を取得します
 const chatMessageContainer = document.getElementById('chatMessageContainer') as HTMLElement;
-const loadingMoreIndicator = document.getElementById('loadingMore') as HTMLElement; // 「さらに読み込み中...」表示用
+const loadingMoreIndicator = document.getElementById('loading-indicator') as HTMLElement; // 「さらに読み込み中...」表示用
+const popupbox = document.getElementById('popup') as HTMLElement; // 「さらに読み込み中...」表示用
 
 let isLoading = false; // 現在データ読み込み中かどうか
 let allDataLoaded = false; // 全てのデータが読み込まれたかどうか
 let page = 0; // 読み込むページのオフセット、または開始位置（サーバーサイドのAPI設計による）
-const size = 20; // 一度に取得するアイテム数（サーバーサイドのAPIと合わせる）
-
+const size = 100; // 一度に取得するアイテム数（サーバーサイドのAPIと合わせる）
+let maxSize = 0;
 
 // --- 3. Axiosで全件データ取得とDOM操作を行う非同期関数 ---
-async function fetchAndDisplayChatMessage(): Promise<void> {
-	try {
+async function fetchAndDisplayChatMessage(resetFlag: boolean = false): Promise<void> {
+		const messageSizeResponse = await axios.get<MessageSize>(`/chat/size`);
+		maxSize = messageSizeResponse.data.size;
 		// Axiosを使って全ユーザーデータを取得します
 		// レスポンスのデータ部分の型を `User[]` (Userオブジェクトの配列) として指定します
-		const response = await axios.get<ChatMessage[]>(`/chat?page=${page}&size=${size}`)
-			.then(function(response) {
-				const chatMessages: ChatMessage[] = response.data; // 取得したデータ
+		const response = await axios.get<ChatMessage[]>(`/chat?page=${page}&size=${size}`);
+		const chatMessages: ChatMessage[] = response.data; // 取得したデータ
 
-				// 読み込み中のメッセージをクリアします
-				if (page === 0) {
-					chatMessageContainer.innerHTML = '';
-				}
-				// 取得したユーザーデータを元にDOMを操作します
-				chatMessages.forEach(chatMessage => {
-					// --- 4. DOM操作: ユーザーごとにカード要素を作成 ---
-					const messageDiv = document.createElement('div');
-					messageDiv.className = 'messageDiv';
-					messageDiv.id = chatMessage.discordMessageId;
+		const loading = document.createElement('div');
+		// 読み込み中のメッセージをクリアします
+		if (page === 0 || resetFlag) {
+			page = 0;
+			chatMessageContainer.innerHTML = '';
 
-					const head = document.createElement('div');
-					head.textContent = `id: ${chatMessage.id} 名前: ${chatMessage.name} ${chatMessage.createDate}`;
-					head.className = 'headDiv';
-
-					const main = document.createElement('div');
-					main.className = 'mainDiv';
-					const quate = document.createElement('div');
-					quate.className = 'quateDiv';
-					const message = document.createElement('div');
-					if (chatMessage.quoteId != null) {
-						quate.innerHTML = `>> <a href="#${chatMessage.quoteDiscordId}">${chatMessage.quoteId}</a>`;
-						main.appendChild(quate);
-					}
-					let mainContents: string = '';
-					mainContents += `${chatMessage.message}`;
-					message.innerHTML = mainContents;
-					main.appendChild(message);
-					if (chatMessage.attachmentUrlList != null && chatMessage.attachmentUrlList.length != 0) {
-						chatMessage.attachmentUrlList.forEach((url) => {
-							const a = document.createElement('a');
-							a.href = url;
-							if (url.match("\.jpg|\.png|\.JPG|\.PNG") != null) {
-								const img = document.createElement('img') as HTMLImageElement;
-								img.src = url;
-								img.width = 300;
-								a.appendChild(img);
-							} else {
-								const p = document.createElement('p') as HTMLElement;
-								p.textContent = "リンク";
-								a.appendChild(p);
-							}
-							main.appendChild(a);
-						});
-					}
-
-					// 作成した要素をユーザーカードに追加
-					messageDiv.appendChild(head);
-					messageDiv.appendChild(main);
-
-					// ユーザーカードをコンテナに追加
-					chatMessageContainer.appendChild(messageDiv);
-					page++;
-				});
-			});
-	} catch (error) {
-		// エラーハンドリング
-		console.error('データの取得または表示中にエラーが発生しました:', error);
-		chatMessageContainer.innerHTML = '<p>データの読み込みに失敗しました。</p>';
-
-		// Axiosのエラーの場合、詳細情報を出力
-		if (axios.isAxiosError(error) && error.response) {
-			console.error('APIレスポンスエラー:', error.response.status, error.response.data);
+			loadingMoreIndicator.innerHTML = "ロード中..."
 		}
-	}
+		// 取得したユーザーデータを元にDOMを操作します
+		chatMessages.forEach(chatMessage => {
+			// --- 4. DOM操作: ユーザーごとにカード要素を作成 ---
+			const messageDiv = document.createElement('div');
+			messageDiv.className = 'messageDiv';
+			messageDiv.id = chatMessage.discordMessageId;
 
+			const head = document.createElement('button');
+			head.addEventListener('click', onHeadClick);
+			const idElement = document.createElement('div');
+			head.appendChild(idElement);
+			head.textContent = `id: ${chatMessage.id} 名前: ${chatMessage.name} ${chatMessage.createDate}`;
+			head.className = 'headDiv';
+			head.id = `${chatMessage.id}`;
+
+			const main = document.createElement('div');
+			main.className = 'mainDiv';
+			const quate = document.createElement('div');
+			quate.className = 'quateDiv';
+			const message = document.createElement('div');
+			if (chatMessage.quoteId != null) {
+				quate.innerHTML = `>> <a href="#${chatMessage.quoteDiscordId}">${chatMessage.quoteId}</a>`;
+				main.appendChild(quate);
+			}
+			let mainContents: string = '';
+			mainContents += `${chatMessage.message}`;
+			message.innerHTML = mainContents;
+			main.appendChild(message);
+			if (chatMessage.attachmentUrlList != null && chatMessage.attachmentUrlList.length != 0) {
+				chatMessage.attachmentUrlList.forEach((url) => {
+					const a = document.createElement('a');
+					a.href = url;
+					if (url.match("\.jpg|\.png|\.JPG|\.PNG") != null) {
+						const img = document.createElement('img') as HTMLImageElement;
+						img.src = url;
+						img.width = 300;
+						a.appendChild(img);
+					} else {
+						const p = document.createElement('p') as HTMLElement;
+						p.textContent = "リンク";
+						a.appendChild(p);
+					}
+					main.appendChild(a);
+				});
+			}
+
+			// 作成した要素をユーザーカードに追加
+			messageDiv.appendChild(head);
+			messageDiv.appendChild(main);
+			// ユーザーカードをコンテナに追加
+			chatMessageContainer.appendChild(messageDiv);
+			page++;
+
+
+		});
+		loadingMoreIndicator.innerHTML = "";
 }
+
 // アプリケーション起動時にデータを取得して表示する関数を呼び出します
 document.addEventListener('DOMContentLoaded', () => {
-	fetchAndDisplayChatMessage();
+	fetchAndDisplayChatMessage(false);
 });
 
 async function onPostMessage(): Promise<void> {
@@ -114,7 +117,7 @@ async function onPostMessage(): Promise<void> {
 	const messageElement = document.getElementById('message') as HTMLTextAreaElement;
 	const message: string = messageElement.value as string;
 	const referencedMessageIdElement = document.getElementById('referencedMessageId') as HTMLInputElement;
-	const referencedMessageId: string = referencedMessageIdElement.value as string;
+	const referencedMessageId: string = referencedMessageIdElement.textContent as string;
 	const fileElement = document.getElementById('multipartFile') as HTMLInputElement;
 	const multipartFileList: FileList = fileElement.files as FileList;
 	if (multipartFileList && multipartFileList.length !== 0) {
@@ -130,19 +133,33 @@ async function onPostMessage(): Promise<void> {
 
 	// Axiosでリクエスト送信
 	await axios.post('/chat', formData, {
-	})
-		.then(function(response) {
-			resetChatMessageAndDisplay();
-		});
+	}).then(function (response) {
+		resetAndDisplayChatMessage();
+	});
 }
 
-let button = document.getElementById("button") as HTMLInputElement;
+function onHeadClick(event: MouseEvent): void {
+	const clickedElement = event.target as HTMLElement;
+	const referencedMessageIdElement = document.getElementById('referencedMessageId') as HTMLInputElement;
+	const headElement: HTMLInputElement = document.getElementById(clickedElement.id) as HTMLInputElement;
+	referencedMessageIdElement.value = clickedElement.id;
+	headElement.style.display = "block";
+}
+
+async function checkNewMessage(): Promise<void> {
+	const messageSizeResponse = await axios.get<MessageSize>(`/chat/size`);
+	const newSize = messageSizeResponse.data.size;
+	if (newSize > maxSize) {
+		resetAndDisplayChatMessage();
+	}
+}
+
+const button = document.getElementById("button") as HTMLInputElement;
 button.onclick = onPostMessage;
 
-async function resetChatMessageAndDisplay(): Promise<void> {
-	page = 0;
-	fetchAndDisplayChatMessage();
+async function resetAndDisplayChatMessage(): Promise<void> {
+	fetchAndDisplayChatMessage(true);
 }
 
-setInterval(fetchAndDisplayChatMessage, 5000);
+setInterval(checkNewMessage, 1000);
 

@@ -3,25 +3,8 @@
 body {
 	font-family: sans-serif;
 	margin: 20px;
-	overflow-y: scroll;
 }
-
-/*#chatMessageContainer {*/
-/*	border: 1px solid #ccc;*/
-/*	padding: 10px;*/
-/*	max-height: 1000px;*/
-/*	 スクロール可能にするために高さを制限 */
-/*	 縦スクロールを有効にする */
-/*}*/
-
 .messageDiv {
 	border-bottom: 1px dashed #eee;
 	padding: 10px 0;
-}
-
-.loading-indicator {
-	text-align: center;
-	padding: 10px;
-	font-style: italic;
-	color: #888;
 }

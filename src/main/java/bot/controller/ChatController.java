@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import bot.dto.ChatMessageDto;
+import bot.dto.MessageSizeDto;
 import bot.form.MessageForm;
 import bot.service.ChatService;
 
@@ -26,10 +27,21 @@ public class ChatController {
 	@Autowired
 	private ChatService chatService;
 
-	@GetMapping
-	public List<ChatMessageDto> getAllChats(@PageableDefault(size = 20) Pageable pageable) {
+	@GetMapping("/pageable")
+	public List<ChatMessageDto> getAllChatsPageable(@PageableDefault(size = 20) Pageable pageable) {
 		return chatService.getChatMessageDtoList(pageable);
 	}
+	@GetMapping
+	public List<ChatMessageDto> getAllChats() {
+		return chatService.getChatMessageDtoList();
+	}
+	@GetMapping("/size")
+	public MessageSizeDto getSize() {
+		MessageSizeDto messageSizeDto = new MessageSizeDto();
+		messageSizeDto.setSize( chatService.getChatMessageDtoList().size());
+		return messageSizeDto;
+	}
+
 
 	@PostMapping
 	public void postMessage(MessageForm messageForm) {
@@ -37,7 +49,7 @@ public class ChatController {
 			Long referencedMessageId = 0L;
 			MultipartFile multipartFile = messageForm.getMultipartFile();
 			if (messageForm.getReferencedMessageId() != null && !messageForm.getReferencedMessageId().isEmpty())
-				referencedMessageId = Long.parseLong(messageForm.getReferencedMessageId());
+				referencedMessageId = Long.parseLong(messageForm.getReferencedMessageId().trim());
 			if (multipartFile == null) {
 				chatService.sendMessage(messageForm.getName(), messageForm.getMessage(),
 						referencedMessageId, null, null);

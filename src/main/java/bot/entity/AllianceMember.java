@@ -17,6 +17,7 @@ public class AllianceMember {
 	private String discordName;
 	private String ayarabuId;
 	private String ayarabuName;
+	private String allianceName;
 	private Integer statementCount;
 	private String createDate;
 }

@@ -1,7 +1,6 @@
 package bot.service;
 
 import java.io.InputStream;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -15,8 +14,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import bot.DiscordBotTestApplication;
+import bot.dto.AllianceMemberDto;
 import bot.dto.ChatMessageDto;
-import bot.dto.MemberDto;
 import bot.entity.ChatAttachment;
 import bot.entity.ChatMessage;
 import bot.model.discord.DiscordModel;
@@ -32,7 +32,6 @@ import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
 @Service
 public class ChatService extends DiscordModel {
 	private static final Logger log = LoggerFactory.getLogger(ChatService.class);
-
 	@Autowired
 	private ChatAttachmentRepository chatAttachmentRepository;
 	@Autowired
@@ -40,7 +39,9 @@ public class ChatService extends DiscordModel {
 
 	private List<ChatMessageDto> chatMessageDtoList= new ArrayList<>();
 
-	public void init() {
+	public void init(DiscordBot discordBot, ChatMessageRepository chatMessageRepository,
+			ChatAttachmentRepository chatAttachmentRepository) {
+		super.init(discordBot, chatMessageRepository, chatAttachmentRepository);
 		ModelMapper modelMapper = new ModelMapper();
 		chatMessageDtoList = modelMapper.map(chatMessageRepository.findAllByOrderByIdDesc(),
 				new TypeToken<List<ChatMessageDto>>() {
@@ -51,14 +52,13 @@ public class ChatService extends DiscordModel {
 
 	@Override
 	@Transactional
-	public void onMessageReceived(MemberDto memberDto, String messageId, String message, String referencedMessageId,
+	public void onMessageReceived(AllianceMemberDto allianceMemberDto, String messageId, String message, String referencedMessageId,
 			List<String> attachmentUrlList) {
 		ChatMessageDto chatMessageDto = new ChatMessageDto();
 		chatMessageDto.setAttachmentUrlList(attachmentUrlList);
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/DD HH:mm:ss");
-		chatMessageDto.setCreateDate(sdf.format(new Date()));
+		chatMessageDto.setCreateDate(DiscordBotTestApplication.sdf.format(new Date()));
 		chatMessageDto.setDiscordMessageId(messageId);
-		chatMessageDto.setName(memberDto.getDiscordName());
+		chatMessageDto.setName(allianceMemberDto.getDiscordName());
 		message = message.replace("\n", "<br>");
 		chatMessageDto.setMessage(message);
 		chatMessageDto.setQuoteDiscordId(referencedMessageId);
@@ -68,17 +68,6 @@ public class ChatService extends DiscordModel {
 
 		ModelMapper modelMapper = new ModelMapper();
 		ChatMessage chatMessage = modelMapper.map(chatMessageDto, ChatMessage.class);
-
-		// 添付ファイルを ChatMessage オブジェクトに追加
-		if (attachmentUrlList != null && !attachmentUrlList.isEmpty()) {
-			attachmentUrlList.forEach((url) -> {
-				ChatAttachment chatAttachment = new ChatAttachment();
-				chatAttachment.setAttachmentUrl(url);
-				chatAttachment.setChatMessage(chatMessage);
-				chatMessage.getChatAttachmentList().add(chatAttachment);
-			});
-		}
-
 		// ChatMessage を保存
 		ChatMessage savedChatMessage = chatMessageRepository.save(chatMessage);
 
@@ -87,6 +76,7 @@ public class ChatService extends DiscordModel {
 				ChatAttachment chatAttachment = new ChatAttachment();
 				chatAttachment.setAttachmentUrl(url);
 				chatAttachment.setChatMessage(chatMessage);
+				chatAttachment.setAttachmentFileName(chatAttachment.getAttachmentFileName());
 				savedChatMessage.getChatAttachmentList().add(chatAttachment);
 				chatAttachmentRepository.save(chatAttachment);
 			});
@@ -142,15 +132,9 @@ public class ChatService extends DiscordModel {
 	}
 
 	@Override
-	public void setDiscordModel(DiscordBot discordBot) {
-		super.setDiscordModel(discordBot);
-	}
-
-
-	@Override
-	public void onMessageUpdate(MemberDto memberDto, String messageId, String message, String referencedMessageId,
+	public void onMessageUpdate(AllianceMemberDto allianceMemberDto, String messageId, String message, String referencedMessageId,
 			List<String> attachmentUrlList) {
-		super.onMessageUpdate(memberDto, messageId, message, referencedMessageId, attachmentUrlList);
+		super.onMessageUpdate(allianceMemberDto, messageId, message, referencedMessageId, attachmentUrlList);
 	}
 
 
@@ -161,14 +145,14 @@ public class ChatService extends DiscordModel {
 
 
 	@Override
-	public void onGuildMemberJoin(MemberDto memberDto) {
-		super.onGuildMemberJoin(memberDto);
+	public void onGuildMemberJoin(AllianceMemberDto allianceMemberDto) {
+		super.onGuildMemberJoin(allianceMemberDto);
 	}
 
 
 	@Override
-	public void onGuildMemberRemove(MemberDto memberDto) {
-		super.onGuildMemberRemove(memberDto);
+	public void onGuildMemberRemove(AllianceMemberDto allianceMemberDto) {
+		super.onGuildMemberRemove(allianceMemberDto);
 	}
 
 	@Override
@@ -177,6 +161,7 @@ public class ChatService extends DiscordModel {
 		super.sendMessage(name, message, referencedMessageId, inputStream, fileName);
 	}
 
+	// 以下、discordから呼ばれたらモデルの処理に渡しjdaを排除したメソッドをコールしてもらう。ちょっと汚くて気にいらない
 	@Override
 	public void onMessageDelete(MessageDeleteEvent event) {
 		super.onMessageDeleteModel(event);

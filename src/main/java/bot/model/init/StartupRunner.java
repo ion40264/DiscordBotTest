@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import bot.repository.ChatAttachmentRepository;
+import bot.repository.ChatMessageRepository;
 import bot.service.ChatService;
 import bot.util.discord.DiscordBot;
 import bot.util.github.Git;
@@ -18,14 +20,22 @@ public class StartupRunner implements CommandLineRunner {
 	@Autowired
 	private DiscordBot discordBot;
 	@Autowired
+	private ChatAttachmentRepository chatAttachmentRepository;
+	@Autowired
+	private ChatMessageRepository chatMessageRepository;
+	@Autowired
 	private Git git;
 
 	@Override
 	public void run(String... args) throws Exception {
-		chatService.setDiscordModel(discordBot);
-		discordBot.init(chatService);
-		chatService.init();
-		git.init();
+		try {
+			discordBot.init(chatService);
+			chatService.init(discordBot, chatMessageRepository, chatAttachmentRepository);
+			git.init();
+		} catch (Exception e) {
+			log.error("初期起動に失敗しました。終了します。",e);
+			System.exit(-1);
+		}
 		log.info("初期起動完了");
 	}
 

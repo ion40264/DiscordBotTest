@@ -2,14 +2,18 @@ package bot.util.discord;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.regex.Pattern;
 
+import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import bot.dto.MemberDto;
+import bot.DiscordBotTestApplication;
+import bot.dto.AllianceMemberDto;
 import bot.entity.AllianceMember;
 import bot.repository.AllianceMemberRepository;
 import bot.util.prop.AppriCationProperties;
@@ -18,8 +22,8 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
@@ -33,11 +37,13 @@ public class DiscordBot {
 	private TextChannel textChannel;
 	private TextChannel webTextChannel;
 	private Guild guild;
-	private List<MemberDto> memberDtoList = new ArrayList<>();
+	private List<AllianceMemberDto> allianceMemberDtoList = new ArrayList<>();
 	@Autowired
 	private AppriCationProperties appriCationProperties;
 	@Autowired
-	private AllianceMemberRepository discoMemberRepository;
+	private AllianceMemberRepository allianceMemberRepository;
+
+	private boolean endFlag = true;
 
 	public void init(ListenerAdapter listenerAdapter) {
 		jda = JDABuilder.createDefault(System.getenv("DISCORD_BOT_TOKEN"))
@@ -61,47 +67,72 @@ public class DiscordBot {
 		textChannel = guild.getTextChannelById(appriCationProperties.getChannelId());
 		webTextChannel = guild.getTextChannelById(appriCationProperties.getWebChannelId());
 
+		endFlag = true;
 		getGuild().loadMembers().onSuccess(members -> {
 			if (members.isEmpty()) {
 				log.error("このギルドにはメンバーがいません（または取得できませんでした）。");
+				endFlag = false;
 				return;
 			}
 
-			for (Member member : members) {
-				MemberDto memberDto = new MemberDto();
-				memberDto.setMemeber(member);
-				String nickname = member.getNickname();
-				String effectiveName = member.getEffectiveName();
-				if (nickname == null) {
-					nickname = effectiveName;
-				} else {
-				}
-				AllianceMember allianceMember = discoMemberRepository.findByDiscordName(nickname);
-				if (allianceMember == null) {
-					allianceMember = new AllianceMember();
-					allianceMember.setDiscordName(nickname);
-					allianceMember.setStatementCount(0);
-					discoMemberRepository.save(allianceMember);
-				}
-				memberDto.setId(allianceMember.getId());
-				memberDto.setCount(allianceMember.getStatementCount());
-				memberDto.setDiscordName(nickname);
+			try {
+				for (Member member : members) {
+					AllianceMemberDto allianceMemberDto = new AllianceMemberDto();
+					String nickname = member.getNickname();
+					String effectiveName = member.getEffectiveName();
+					if (nickname == null) {
+						nickname = effectiveName;
+					}
+					AllianceMember allianceMember = allianceMemberRepository.findByDiscordMemberId(member.getId());
+					if (allianceMember == null) {
+						allianceMemberDto.setAyarabuId("");
+						allianceMemberDto.setAyarabuName(nickname);
+						allianceMemberDto.setBot(false);
+						allianceMemberDto.setCreateDate(DiscordBotTestApplication.sdf.format(new Date()));
+						allianceMemberDto.setStatementCount(0);
+						allianceMemberDto.setAllianceName("無所属");
+						allianceMemberDto.setDiscordMemberId(member.getId());
+						allianceMemberDto.setDiscordName(nickname);
 
-				memberDtoList.add(memberDto);
-				log.info("メンバー:" + nickname);
+						ModelMapper modelMapper = new ModelMapper();
+						allianceMember = modelMapper.map(allianceMemberDto, AllianceMember.class);
+						allianceMember = allianceMemberRepository.save(allianceMember);
+						allianceMemberDto.setId(allianceMember.getId());
+					} else {
+						ModelMapper modelMapper = new ModelMapper();
+						allianceMember.setDiscordName(nickname);
+						allianceMemberDto = modelMapper.map(allianceMember, AllianceMemberDto.class);
+					}
+
+					allianceMemberDtoList.add(allianceMemberDto);
+					log.info("メンバー:" + nickname);
+				}
+			} catch (Exception e) {
+				log.error("メンバー取得でエラー",e);
+				throw e;
 			}
+			endFlag = false;
 
 		}).onError(throwable -> {
-			if (throwable instanceof InsufficientPermissionException) {
-			} else {
-			}
+			log.error("メンバー取得でエラー", throwable);
+			endFlag = false;
 		});
-		try {
-			// 同期がわからんので暫定
-			Thread.sleep(500L);
-		} catch (InterruptedException e) {
+		while (endFlag) {
+			try {
+				Thread.sleep(100L);
+			} catch (InterruptedException e) {
+			}
 		}
 		log.info("Discordメンバー取得完了");
+	}
+
+	public String getMention(String discordUserId) {
+		User user = jda.retrieveUserById(discordUserId).complete();
+		String mention = null;
+		if (user != null) {
+			mention = user.getAsMention();
+		}
+		return mention;
 	}
 
 	public Guild getGuild() {
@@ -116,26 +147,57 @@ public class DiscordBot {
 		return webTextChannel;
 	}
 
-	public void sendMessage(String name, String message, String referencedMessageId, InputStream inputStream, String fileName) {
-		sendMessage(name.trim() + "さんの発言：\n" + message, referencedMessageId, inputStream, fileName);
+	public void sendMessage(String name, String message, String referencedMessageId, InputStream inputStream,
+			String fileName) {
+		if (name.trim().isEmpty()) {
+			sendMessage(message, referencedMessageId, inputStream, fileName);
+		} else {
+			sendMessage(name.trim() + "さんの発言：\n" + message, referencedMessageId, inputStream, fileName);
+		}
 	}
+
 	public void sendMessage(String message, String referencedMessageId, InputStream inputStream, String fileName) {
-		MessageCreateAction messageCreateAction = getWebTextChannel().sendMessage(message);
+		if (message.isEmpty())
+			return;
+		String replaceMessage = "";
+		for (AllianceMemberDto allianceMemberDto : allianceMemberDtoList) {
+			String mentionName = "@" + allianceMemberDto.getDiscordName();
+			Pattern pattern = Pattern.compile("(" + mentionName + ")");
+			String[] arr = pattern.split(message);
+			if (arr.length == 1)
+				continue;
+			replaceMessage = "";
+			for (int i = 0; i < arr.length; i++) {
+				String str = arr[i];
+				if (message.startsWith(mentionName)) {
+					replaceMessage += getMention(allianceMemberDto.getDiscordMemberId()) + str;
+				} else if (i < arr.length - 1) {
+					replaceMessage += str + getMention(allianceMemberDto.getDiscordMemberId());
+				} else {
+					replaceMessage += str;
+				}
+			}
+			message = replaceMessage;
+		}
+		if (replaceMessage.isEmpty())
+			replaceMessage = message;
+
+		MessageCreateAction messageCreateAction = getWebTextChannel().sendMessage(replaceMessage);
 		if (referencedMessageId != null && !referencedMessageId.isEmpty())
 			messageCreateAction.setMessageReference(referencedMessageId.trim());
-		if (inputStream != null) 
+		if (inputStream != null)
 			messageCreateAction.setFiles(FileUpload.fromData(inputStream, fileName));
 		messageCreateAction.queue();
 	}
 
-	public List<MemberDto> getMemberDtoList() {
-		return memberDtoList;
+	public List<AllianceMemberDto> getAllianceMemberDtoList() {
+		return allianceMemberDtoList;
 	}
 
-	public MemberDto getMemberDto(String discordMemberId) {
-		for (MemberDto memberDto : memberDtoList) {
-			if (memberDto.getMemeber().getId().equals(discordMemberId))
-				return memberDto;
+	public AllianceMemberDto getAllianceMemberDto(String discordMemberId) {
+		for (AllianceMemberDto allianceMemberDto : allianceMemberDtoList) {
+			if (allianceMemberDto.getDiscordMemberId().equals(discordMemberId))
+				return allianceMemberDto;
 		}
 		return null;
 	}

@@ -40,6 +40,7 @@ CREATE TABLE [chat_attachment]
 	[id] integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 	[attachment_url] text,
 	[chat_message_id] integer NOT NULL,
+	[attachment_file_name] text,
 	FOREIGN KEY ([chat_message_id])
 	REFERENCES [chat_message] ([id])
 );

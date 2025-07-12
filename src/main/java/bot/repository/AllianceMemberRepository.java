@@ -9,4 +9,5 @@ import bot.entity.AllianceMember;
 public interface  AllianceMemberRepository extends JpaRepository<AllianceMember, Long>{
 	public AllianceMember findByAyarabuName(String ayarabuName);
 	public AllianceMember findByDiscordName(String discordName);
+	public AllianceMember findByDiscordMemberId(String discordMemberId);
 }

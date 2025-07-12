@@ -19,4 +19,5 @@ public class ChatAttachment {
 	@JoinColumn(name = "chat_message_id") // 外部キーカラムを指定
 	private ChatMessage chatMessage;
 	private String attachmentUrl;
+	private String attachmentFileName;
 }
