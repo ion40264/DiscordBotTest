@@ -70,7 +70,7 @@ public class ChatService extends DiscordModel {
 		// TODO ChatMessageを保存 配下のChatAttachmentも同時に保存できるはず。うまくいかなかったので暫定
 		ChatMessage savedChatMessage = chatMessageRepository.save(chatMessage);
 		chatMessageDto.setId(savedChatMessage.getId());
-		chatMessageDtoList.add(chatMessageDto);
+		chatMessageDtoList.addFirst(chatMessageDto);
 
 		if (attachmentUrlList != null && !attachmentUrlList.isEmpty()) {
 			attachmentUrlList.forEach((url) -> {

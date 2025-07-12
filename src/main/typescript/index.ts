@@ -161,5 +161,5 @@ async function resetAndDisplayChatMessage(): Promise<void> {
 	fetchAndDisplayChatMessage(true);
 }
 
-setInterval(checkNewMessage, 1000);
+setInterval(resetAndDisplayChatMessage, 5000);
 
