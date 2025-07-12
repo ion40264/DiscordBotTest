@@ -64,12 +64,13 @@ public class ChatService extends DiscordModel {
 		chatMessageDto.setQuoteDiscordId(referencedMessageId);
 		chatMessageDto.setQuoteId(getReferencedMessageIdById(referencedMessageId));
 		log.info("メッセージ:" + chatMessageDto);
-		chatMessageDtoList.add(chatMessageDto);
 
 		ModelMapper modelMapper = new ModelMapper();
 		ChatMessage chatMessage = modelMapper.map(chatMessageDto, ChatMessage.class);
 		// TODO ChatMessageを保存 配下のChatAttachmentも同時に保存できるはず。うまくいかなかったので暫定
 		ChatMessage savedChatMessage = chatMessageRepository.save(chatMessage);
+		chatMessageDto.setId(savedChatMessage.getId());
+		chatMessageDtoList.add(chatMessageDto);
 
 		if (attachmentUrlList != null && !attachmentUrlList.isEmpty()) {
 			attachmentUrlList.forEach((url) -> {
