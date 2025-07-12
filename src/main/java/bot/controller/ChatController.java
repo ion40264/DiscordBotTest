@@ -48,6 +48,8 @@ public class ChatController {
 		try {
 			Long referencedMessageId = 0L;
 			MultipartFile multipartFile = messageForm.getMultipartFile();
+			
+			// TODO 要リファクタ
 			if (messageForm.getReferencedMessageId() != null && !messageForm.getReferencedMessageId().isEmpty())
 				referencedMessageId = Long.parseLong(messageForm.getReferencedMessageId().trim());
 			if (multipartFile == null) {

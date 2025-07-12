@@ -68,7 +68,7 @@ public class ChatService extends DiscordModel {
 
 		ModelMapper modelMapper = new ModelMapper();
 		ChatMessage chatMessage = modelMapper.map(chatMessageDto, ChatMessage.class);
-		// ChatMessage を保存
+		// TODO ChatMessageを保存 配下のChatAttachmentも同時に保存できるはず。うまくいかなかったので暫定
 		ChatMessage savedChatMessage = chatMessageRepository.save(chatMessage);
 
 		if (attachmentUrlList != null && !attachmentUrlList.isEmpty()) {

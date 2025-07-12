@@ -46,26 +46,26 @@ public class DiscordBot {
 	private boolean endFlag = true;
 
 	public void init(ListenerAdapter listenerAdapter) {
-		jda = JDABuilder.createDefault(System.getenv("DISCORD_BOT_TOKEN"))
-				.setRawEventsEnabled(true)
-				.setMemberCachePolicy(MemberCachePolicy.ALL)
-				.enableIntents(GatewayIntent.MESSAGE_CONTENT)
-				.enableIntents(GatewayIntent.GUILD_MESSAGES)
-				.enableIntents(GatewayIntent.GUILD_MEMBERS)
-				.setActivity(Activity.playing("ステータス"))
-				.build();
-		jda.addEventListener(listenerAdapter);
-
-		jda.updateCommands().queue();
 		try {
-			jda.awaitReady();
-		} catch (InterruptedException e) {
-			log.error("DiscordBot初期化エラー.", e);
-		}
+			jda = JDABuilder.createDefault(System.getenv("DISCORD_BOT_TOKEN"))
+					.setRawEventsEnabled(true)
+					.setMemberCachePolicy(MemberCachePolicy.ALL)
+					.enableIntents(GatewayIntent.MESSAGE_CONTENT)
+					.enableIntents(GatewayIntent.GUILD_MESSAGES)
+					.enableIntents(GatewayIntent.GUILD_MEMBERS)
+					.setActivity(Activity.playing("ステータス"))
+					.build();
+			jda.addEventListener(listenerAdapter);
 
-		guild = jda.getGuildById(appriCationProperties.getGuildId());
-		textChannel = guild.getTextChannelById(appriCationProperties.getChannelId());
-		webTextChannel = guild.getTextChannelById(appriCationProperties.getWebChannelId());
+			jda.updateCommands().queue();
+			jda.awaitReady();
+
+			guild = jda.getGuildById(appriCationProperties.getGuildId());
+			textChannel = guild.getTextChannelById(appriCationProperties.getChannelId());
+			webTextChannel = guild.getTextChannelById(appriCationProperties.getWebChannelId());
+		} catch (Exception e) {
+			throw new RuntimeException("DiscordBot初期化エラー.", e);
+		}
 
 		endFlag = true;
 		getGuild().loadMembers().onSuccess(members -> {
@@ -108,7 +108,7 @@ public class DiscordBot {
 					log.info("メンバー:" + nickname);
 				}
 			} catch (Exception e) {
-				log.error("メンバー取得でエラー",e);
+				log.error("メンバー取得でエラー", e);
 				throw e;
 			}
 			endFlag = false;
@@ -117,10 +117,12 @@ public class DiscordBot {
 			log.error("メンバー取得でエラー", throwable);
 			endFlag = false;
 		});
+		// TODO すっげー嫌な書き方
 		while (endFlag) {
 			try {
 				Thread.sleep(100L);
 			} catch (InterruptedException e) {
+				endFlag = false;
 			}
 		}
 		log.info("Discordメンバー取得完了");
@@ -190,10 +192,12 @@ public class DiscordBot {
 		messageCreateAction.queue();
 	}
 
+	// TODO ここにメンバーの責務を書くのはおかしいね
 	public List<AllianceMemberDto> getAllianceMemberDtoList() {
 		return allianceMemberDtoList;
 	}
 
+	// TODO ここにメンバーの責務を書くのはおかしいね
 	public AllianceMemberDto getAllianceMemberDto(String discordMemberId) {
 		for (AllianceMemberDto allianceMemberDto : allianceMemberDtoList) {
 			if (allianceMemberDto.getDiscordMemberId().equals(discordMemberId))

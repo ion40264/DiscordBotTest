@@ -47,6 +47,7 @@ public class DiscordModel extends ListenerAdapter {
 		endFlag = true;
 		String messageId;
 		sendMessage("ボット", "ボット起動", null, null, null);
+		// TODO 気に食わない
 		try {
 			Thread.sleep(500L);
 		} catch (InterruptedException e) {
@@ -62,7 +63,7 @@ public class DiscordModel extends ListenerAdapter {
 						endFlag = false;
 
 					});
-			// すっげーいやな書き方。。
+			// TODO すっげーいやな書き方。。
 			while (endFlag) {
 				try {
 					Thread.sleep(100);
@@ -82,6 +83,7 @@ public class DiscordModel extends ListenerAdapter {
 			if (chatMessageRepository.findByDiscordMessageId(message.getId()) != null)
 				continue;
 			ChatMessage chatMessage = new ChatMessage();
+			// TODO 日付の文字列型変換は共通に抜き出したい
 			chatMessage
 					.setCreateDate(message.getTimeCreated().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
 			chatMessage.setDiscordMessageId(message.getId());
