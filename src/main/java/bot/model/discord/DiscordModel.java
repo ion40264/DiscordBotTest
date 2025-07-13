@@ -9,6 +9,8 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import bot.dto.AllianceMemberDto;
 import bot.entity.ChatAttachment;
@@ -26,17 +28,18 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
+@Component
 public class DiscordModel extends ListenerAdapter {
 	private static final Logger log = LoggerFactory.getLogger(DiscordModel.class);
+	@Autowired
 	private DiscordBot discordBot;
+	@Autowired
 	private ChatMessageRepository chatMessageRepository;
+	@Autowired
 	private ChatAttachmentRepository chatAttachmentRepository;
+	private List<DIscordEventListener> dIscordEventListenerList = new ArrayList<DIscordEventListener>();
 
-	public void init(DiscordBot discordBot, ChatMessageRepository chatMessageRepository,
-			ChatAttachmentRepository chatAttachmentRepository) {
-		this.discordBot = discordBot;
-		this.chatMessageRepository = chatMessageRepository;
-		this.chatAttachmentRepository = chatAttachmentRepository;
+	public void init() {
 		getHistory(100);
 	}
 
@@ -107,8 +110,13 @@ public class DiscordModel extends ListenerAdapter {
 			chatMessageRepository.save(chatMessage);
 		}
 	}
+	
+	public void adddIscordEventListener(DIscordEventListener dIscordEventListener) {
+		dIscordEventListenerList.add(dIscordEventListener);
+	}
 
-	public void onMessageReceivedModel(MessageReceivedEvent event) {
+	@Override
+	public void onMessageReceived(MessageReceivedEvent event) {
 		Member member = event.getMember();
 		Message discoMessage = event.getMessage();
 		List<Attachment> attachmentList = discoMessage.getAttachments();
@@ -124,21 +132,19 @@ public class DiscordModel extends ListenerAdapter {
 		allianceMemberDto.setBot(event.getAuthor().isBot());
 		String message = event.getMessage().getContentDisplay();
 		Message referencedMessage = discoMessage.getReferencedMessage();
-		if (referencedMessage != null) {
-			onMessageReceived(allianceMemberDto, discoMessage.getId(), message, referencedMessage.getId(),
+		String referencedMessageId = null;
+		if (referencedMessage != null)
+			referencedMessageId = referencedMessage.getId();
+		for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
+			dIscordEventListener.onMessageReceived(allianceMemberDto, discoMessage.getId(), message,
+					referencedMessageId,
 					urlList);
-		} else {
-			onMessageReceived(allianceMemberDto, discoMessage.getId(), message, null,
-					urlList);
+
 		}
 	}
 
-	public void onMessageReceived(AllianceMemberDto allianceMemberDto, String messageId, String message,
-			String referencedMessageId,
-			List<String> attachmentUrlList) {
-	}
-
-	public void onMessageUpdateModel(MessageUpdateEvent event) {
+	@Override
+	public void onMessageUpdate(MessageUpdateEvent event) {
 		Member member = event.getMember();
 		Message discoMessage = event.getMessage();
 		List<Attachment> attachmentList = discoMessage.getAttachments();
@@ -151,41 +157,47 @@ public class DiscordModel extends ListenerAdapter {
 		AllianceMemberDto allianceMemberDto = discordBot.getAllianceMemberDto(member.getId());
 		allianceMemberDto.setBot(event.getAuthor().isBot());
 		String message = event.getMessage().getContentRaw();
-		onMessageUpdate(allianceMemberDto, discoMessage.getId(), message, discoMessage.getReferencedMessage().getId(),
-				urlList);
+		Message referencedMessage = discoMessage.getReferencedMessage();
+		String referencedMessageId = null;
+		if (referencedMessage != null)
+			referencedMessageId = referencedMessage.getId();
+		for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
+			dIscordEventListener.onMessageUpdate(allianceMemberDto, discoMessage.getId(), message,
+					referencedMessageId,
+					urlList);
+
+		}
 
 	}
 
-	public void onMessageUpdate(AllianceMemberDto allianceMemberDto, String messageId, String message,
-			String referencedMessageId,
-			List<String> attachmentUrlList) {
+	@Override
+	public void onMessageDelete(MessageDeleteEvent event) {
+		for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
+			dIscordEventListener
+					.onMessageDelete(event.getMessageId());
+		}
 	}
 
-	public void onMessageDeleteModel(MessageDeleteEvent event) {
-		onMessageDelete(event.getMessageId());
-	}
-
-	public void onMessageDelete(String messageId) {
-	}
-
-	public void onGuildMemberJoinModel(GuildMemberJoinEvent event) {
+	@Override
+	public void onGuildMemberJoin(GuildMemberJoinEvent event) {
 		Member member = event.getMember();
 		AllianceMemberDto allianceMemberDto = discordBot.getAllianceMemberDto(member.getId());
 		allianceMemberDto.setBot(false);
-		onGuildMemberJoin(allianceMemberDto);
+		for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
+			dIscordEventListener
+					.onGuildMemberJoin(allianceMemberDto);
+		}
 	}
 
-	public void onGuildMemberJoin(AllianceMemberDto allianceMemberDto) {
-	}
-
-	public void onGuildMemberRemoveModel(GuildMemberRemoveEvent event) {
+	@Override
+	public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
 		Member member = event.getMember();
 		AllianceMemberDto allianceMemberDto = discordBot.getAllianceMemberDto(member.getId());
 		allianceMemberDto.setBot(false);
-		onGuildMemberRemove(allianceMemberDto);
-	}
-
-	public void onGuildMemberRemove(AllianceMemberDto allianceMemberDto) {
+		for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
+			dIscordEventListener
+					.onGuildMemberRemove(allianceMemberDto);
+		}
 	}
 
 	public void sendMessage(String name, String message, String referencedMessageId, InputStream inputStream,

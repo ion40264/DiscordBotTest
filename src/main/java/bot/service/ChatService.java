@@ -19,19 +19,16 @@ import bot.dto.AllianceMemberDto;
 import bot.dto.ChatMessageDto;
 import bot.entity.ChatAttachment;
 import bot.entity.ChatMessage;
+import bot.model.discord.DIscordEventListener;
 import bot.model.discord.DiscordModel;
 import bot.repository.ChatAttachmentRepository;
 import bot.repository.ChatMessageRepository;
-import bot.util.discord.DiscordBot;
-import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
-import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
-import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
 
 @Service
-public class ChatService extends DiscordModel {
+public class ChatService implements DIscordEventListener {
 	private static final Logger log = LoggerFactory.getLogger(ChatService.class);
+	@Autowired
+	private DiscordModel discordModel;
 	@Autowired
 	private ChatAttachmentRepository chatAttachmentRepository;
 	@Autowired
@@ -39,9 +36,7 @@ public class ChatService extends DiscordModel {
 
 	private List<ChatMessageDto> chatMessageDtoList= new ArrayList<>();
 
-	public void init(DiscordBot discordBot, ChatMessageRepository chatMessageRepository,
-			ChatAttachmentRepository chatAttachmentRepository) {
-		super.init(discordBot, chatMessageRepository, chatAttachmentRepository);
+	public void init() {
 		ModelMapper modelMapper = new ModelMapper();
 		chatMessageDtoList = modelMapper.map(chatMessageRepository.findAllByOrderByIdDesc(),
 				new TypeToken<List<ChatMessageDto>>() {
@@ -112,7 +107,7 @@ public class ChatService extends DiscordModel {
 
 	public void sendMessage(String name, String message, long referencedMessageId, InputStream inputStream,
 			String fileName) {
-		super.sendMessage(name, message, getIdByReferencedMessageId(referencedMessageId), inputStream, fileName);
+		discordModel.sendMessage(name, message, getIdByReferencedMessageId(referencedMessageId), inputStream, fileName);
 	}
 
 	@Transactional
@@ -133,58 +128,19 @@ public class ChatService extends DiscordModel {
 	}
 
 	@Override
-	public void onMessageUpdate(AllianceMemberDto allianceMemberDto, String messageId, String message, String referencedMessageId,
-			List<String> attachmentUrlList) {
-		super.onMessageUpdate(allianceMemberDto, messageId, message, referencedMessageId, attachmentUrlList);
+	public void onMessageUpdate(AllianceMemberDto allianceMemberDto, String messageId, String message,
+			String referencedMessageId, List<String> attachmentUrlList) {
 	}
-
 
 	@Override
 	public void onMessageDelete(String messageId) {
-		super.onMessageDelete(messageId);
 	}
-
 
 	@Override
 	public void onGuildMemberJoin(AllianceMemberDto allianceMemberDto) {
-		super.onGuildMemberJoin(allianceMemberDto);
 	}
-
 
 	@Override
 	public void onGuildMemberRemove(AllianceMemberDto allianceMemberDto) {
-		super.onGuildMemberRemove(allianceMemberDto);
 	}
-
-	@Override
-	public void sendMessage(String name, String message, String referencedMessageId, InputStream inputStream,
-			String fileName) {
-		super.sendMessage(name, message, referencedMessageId, inputStream, fileName);
-	}
-
-	// 以下、discordから呼ばれたらモデルの処理に渡しjdaを排除したメソッドをコールしてもらう。ちょっと汚くて気にいらない
-	@Override
-	public void onMessageDelete(MessageDeleteEvent event) {
-		super.onMessageDeleteModel(event);
-	}
-
-	@Override
-	public void onMessageReceived(MessageReceivedEvent event) {
-		super.onMessageReceivedModel(event);
-	}
-
-	@Override
-	public void onMessageUpdate(MessageUpdateEvent event) {
-		super.onMessageUpdateModel(event);
-	}
-	@Override
-	public void onGuildMemberJoin(GuildMemberJoinEvent event) {
-		super.onGuildMemberJoinModel(event);
-	}
-
-	@Override
-	public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
-		super.onGuildMemberRemoveModel(event);
-	}
-
 }
