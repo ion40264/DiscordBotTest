@@ -34,7 +34,7 @@ async function fetchAndDisplayChatMessage(resetFlag: boolean = false): Promise<v
 		maxSize = messageSizeResponse.data.size;
 		// Axiosを使って全ユーザーデータを取得します
 		// レスポンスのデータ部分の型を `User[]` (Userオブジェクトの配列) として指定します
-		const response = await axios.get<ChatMessage[]>(`/chat?page=${page}&size=${size}`);
+		const response = await axios.get<ChatMessage[]>(`/chat/pageable?page=${page}&size=${size}`);
 		const chatMessages: ChatMessage[] = response.data; // 取得したデータ
 
 		const loading = document.createElement('div');
