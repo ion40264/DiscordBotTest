@@ -1,16 +1,16 @@
-package bot.dto;
+package bot.form;
 
 import lombok.Data;
 
 @Data
-public class AllianceMemberDto {
+public class AllianceMemberForm {
 	private Long id;
-	private MemberRole memberRole = MemberRole.MEMBER;
+	private String memberRole;
 	private String discordMemberId;
 	private String discordName;
 	private String ayarabuId;
 	private String ayarabuName;
-	private MemberAlliance alliance = MemberAlliance.NONE;
+	private String alliance;
 	private Integer statementCount;
 	private String createDate;
 	private boolean isBot = false;

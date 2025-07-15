@@ -1,6 +1,5 @@
 package bot.model.discord;
 
-import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -13,16 +12,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import bot.dto.AllianceMemberDto;
+import bot.dto.ChatAttachmentDto;
+import bot.dto.ChatMessageDto;
 import bot.entity.ChatAttachment;
 import bot.entity.ChatMessage;
+import bot.model.MemberModel;
 import bot.repository.ChatAttachmentRepository;
 import bot.repository.ChatMessageRepository;
 import bot.util.discord.DiscordBot;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.Message.Attachment;
+import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
+import net.dv8tion.jda.api.events.message.GenericMessageEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
@@ -33,26 +37,63 @@ public class DiscordModel extends ListenerAdapter {
 	private static final Logger log = LoggerFactory.getLogger(DiscordModel.class);
 	@Autowired
 	private DiscordBot discordBot;
+	// TODO モデルがサービスを呼ぶのは気に食わないけど。。
+	@Autowired
+	private MemberModel memberModel;
 	@Autowired
 	private ChatMessageRepository chatMessageRepository;
 	@Autowired
 	private ChatAttachmentRepository chatAttachmentRepository;
 	private List<DIscordEventListener> dIscordEventListenerList = new ArrayList<DIscordEventListener>();
 
-	public void init() {
-		getHistory(100);
-	}
-
 	private boolean endFlag = false;
 	private List<Message> messageList;
 
-	private void getHistory(int limit) {
+	public void initDiscordMember() {
+		endFlag = true;
+		discordBot.getGuild().loadMembers().onSuccess(members -> {
+			if (members.isEmpty()) {
+				log.error("このギルドにはメンバーがいません（または取得できませんでした）。");
+				endFlag = false;
+				return;
+			}
+
+			try {
+				for (Member member : members) {
+					memberModel.init(getName(member), member.getId(), member.getUser().isBot());
+				}
+			} catch (Exception e) {
+				log.error("メンバー取得でエラー", e);
+				throw e;
+			}
+			endFlag = false;
+
+		}).onError(throwable -> {
+			log.error("メンバー取得でエラー", throwable);
+			endFlag = false;
+		});
+		// TODO すっげー嫌な書き方
+		while (endFlag) {
+			try {
+				Thread.sleep(100L);
+			} catch (InterruptedException e) {
+				endFlag = false;
+			}
+		}
+		endFlag = false;
+		log.info("Discordメンバー取得完了");
+	}
+
+	public void getHistory(int limit) {
 		endFlag = true;
 		String messageId;
-		sendMessage("ボット", "ボット起動", null, null, null);
+		ChatMessageDto chatMessageDto = new ChatMessageDto();
+		chatMessageDto.setName("ボット");
+		chatMessageDto.setMessage("ボット起動");
+		sendMessage(chatMessageDto);
 		// TODO 気に食わない
 		try {
-			Thread.sleep(500L);
+			Thread.sleep(1000L);
 		} catch (InterruptedException e) {
 		}
 		Optional<ChatMessage> optional = chatMessageRepository.findById(1L);
@@ -90,11 +131,13 @@ public class DiscordModel extends ListenerAdapter {
 			chatMessage
 					.setCreateDate(message.getTimeCreated().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
 			chatMessage.setDiscordMessageId(message.getId());
-			chatMessage.setMessage(message.getContentRaw());
-			chatMessage.setName(message.getAuthor().getName());
+			chatMessage.setMessage(message.getContentDisplay().replace("\n", "<br>"));
+			chatMessage.setName(getName(message.getMember()));
 			if (message.getReferencedMessage() != null)
 				chatMessage.setQuoteDiscordId(message.getReferencedMessage().getId());
 			chatMessage.setQuoteId(null);
+			chatMessage.setChannelId(message.getChannelId());
+			chatMessage.setChannelName(message.getChannel().getName());
 			chatMessageRepository.save(chatMessage);
 			message.getAttachments().forEach((attachment) -> {
 				ChatAttachment chatAttachment = new ChatAttachment();
@@ -110,98 +153,141 @@ public class DiscordModel extends ListenerAdapter {
 			chatMessageRepository.save(chatMessage);
 		}
 	}
-	
+
 	public void adddIscordEventListener(DIscordEventListener dIscordEventListener) {
 		dIscordEventListenerList.add(dIscordEventListener);
 	}
 
+	public void removeIscordEventListener(DIscordEventListener dIscordEventListener) {
+		dIscordEventListenerList.remove(dIscordEventListener);
+	}
+
 	@Override
 	public void onMessageReceived(MessageReceivedEvent event) {
-		Member member = event.getMember();
-		Message discoMessage = event.getMessage();
+		try {
+			ChatMessageDto chatMessageDto = createChatMessageDto(event, event.getMember(), event.getMessage()); 
+			for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
+				dIscordEventListener
+						.onMessageReceived(chatMessageDto								);
+
+			}
+		} catch (Exception e) {
+			log.error("error.", e);
+			throw e;
+		}
+	}
+
+	private ChatMessageDto createChatMessageDto(GenericMessageEvent event, Member member, Message discoMessage) {
 		List<Attachment> attachmentList = discoMessage.getAttachments();
-		List<String> urlList = new ArrayList<String>();
+
+		List<ChatAttachmentDto> attachmentDtoList = new ArrayList<ChatAttachmentDto>();
 		if (attachmentList != null && !attachmentList.isEmpty()) {
-			attachmentList.forEach((s) -> {
-				urlList.add(s.getUrl());
+			attachmentList.forEach((attachment) -> {
+				ChatAttachmentDto chatAttachmentDto = new ChatAttachmentDto();
+				chatAttachmentDto.setAttachmentFileInputStream(null);
+				chatAttachmentDto.setAttachmentFileName(attachment.getFileName());
+				chatAttachmentDto.setAttachmentUrl(attachment.getUrl());
+				attachmentDtoList.add(chatAttachmentDto);
 			});
 		}
-		AllianceMemberDto allianceMemberDto = discordBot.getAllianceMemberDto(member.getId());
-		if (allianceMemberDto == null)
+		AllianceMemberDto allianceMemberDto = memberModel.getAllianceMemberDto(member.getId());
+		if (allianceMemberDto == null) {
 			allianceMemberDto = new AllianceMemberDto();
-		allianceMemberDto.setBot(event.getAuthor().isBot());
-		String message = event.getMessage().getContentDisplay();
+			log.warn("メンバーにいない人からメッセージ message=" + discoMessage);
+		}
+		String message = discoMessage.getContentDisplay();
 		Message referencedMessage = discoMessage.getReferencedMessage();
 		String referencedMessageId = null;
 		if (referencedMessage != null)
 			referencedMessageId = referencedMessage.getId();
-		for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
-			dIscordEventListener.onMessageReceived(allianceMemberDto, discoMessage.getId(), message,
-					referencedMessageId,
-					urlList);
+		MessageChannelUnion messageChannelUnion = event.getChannel();
 
+		ChatMessageDto chatMessageDto = new ChatMessageDto();
+		chatMessageDto.setChatAttachmentDtoList(attachmentDtoList);
+		chatMessageDto.setCreateDate(
+				discoMessage.getTimeCreated().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+		chatMessageDto.setDiscordMessageId(discoMessage.getId());
+		chatMessageDto.setMessage(message);
+		chatMessageDto.setName(getName(member));
+		chatMessageDto.setQuoteDiscordId(referencedMessageId);
+		chatMessageDto.setChannelId(messageChannelUnion.getId());
+		chatMessageDto.setChannelName(messageChannelUnion.getName());
+
+		ChatMessage chatMessage = chatMessageRepository.findByDiscordMessageId(referencedMessageId);
+		if (chatMessage != null)
+			chatMessageDto.setQuoteId(chatMessage.getId().toString());
+
+		return chatMessageDto;
+	}
+
+	private String getName(Member member) {
+		String nickname = member.getNickname();
+		String effectiveName = member.getEffectiveName();
+		if (nickname == null) {
+			nickname = effectiveName;
 		}
+		return nickname;
 	}
 
 	@Override
 	public void onMessageUpdate(MessageUpdateEvent event) {
-		Member member = event.getMember();
-		Message discoMessage = event.getMessage();
-		List<Attachment> attachmentList = discoMessage.getAttachments();
-		List<String> urlList = new ArrayList<String>();
-		if (attachmentList != null && !attachmentList.isEmpty()) {
-			attachmentList.forEach((s) -> {
-				urlList.add(s.getUrl());
-			});
-		}
-		AllianceMemberDto allianceMemberDto = discordBot.getAllianceMemberDto(member.getId());
-		allianceMemberDto.setBot(event.getAuthor().isBot());
-		String message = event.getMessage().getContentRaw();
-		Message referencedMessage = discoMessage.getReferencedMessage();
-		String referencedMessageId = null;
-		if (referencedMessage != null)
-			referencedMessageId = referencedMessage.getId();
-		for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
-			dIscordEventListener.onMessageUpdate(allianceMemberDto, discoMessage.getId(), message,
-					referencedMessageId,
-					urlList);
+		try {
+			ChatMessageDto chatMessageDto = createChatMessageDto(event, event.getMember(), event.getMessage()); 
+			for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
+				dIscordEventListener.onMessageUpdate(chatMessageDto);
 
+			}
+		} catch (Exception e) {
+			log.error("error.", e);
+			throw e;
 		}
-
 	}
 
 	@Override
 	public void onMessageDelete(MessageDeleteEvent event) {
-		for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
-			dIscordEventListener
-					.onMessageDelete(event.getMessageId());
+		try {
+			for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
+				dIscordEventListener
+						.onMessageDelete(event.getMessageId());
+			}
+		} catch (Exception e) {
+			log.error("error.", e);
+			throw e;
 		}
 	}
 
 	@Override
 	public void onGuildMemberJoin(GuildMemberJoinEvent event) {
-		Member member = event.getMember();
-		AllianceMemberDto allianceMemberDto = discordBot.getAllianceMemberDto(member.getId());
-		allianceMemberDto.setBot(false);
-		for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
-			dIscordEventListener
-					.onGuildMemberJoin(allianceMemberDto);
+		try {
+			Member member = event.getMember();
+			AllianceMemberDto allianceMemberDto = memberModel.getAllianceMemberDto(member.getId());
+			for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
+				dIscordEventListener
+						.onGuildMemberJoin(allianceMemberDto);
+			}
+		} catch (Exception e) {
+			log.error("error.", e);
+			throw e;
 		}
 	}
 
 	@Override
 	public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
-		Member member = event.getMember();
-		AllianceMemberDto allianceMemberDto = discordBot.getAllianceMemberDto(member.getId());
-		allianceMemberDto.setBot(false);
-		for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
-			dIscordEventListener
-					.onGuildMemberRemove(allianceMemberDto);
+		try {
+			Member member = event.getMember();
+			AllianceMemberDto allianceMemberDto = memberModel.getAllianceMemberDto(member.getId());
+			allianceMemberDto.setBot(false);
+			for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
+				dIscordEventListener
+						.onGuildMemberRemove(allianceMemberDto);
+			}
+		} catch (Exception e) {
+			log.error("error.", e);
+			throw e;
 		}
 	}
 
-	public void sendMessage(String name, String message, String referencedMessageId, InputStream inputStream,
-			String fileName) {
-		discordBot.sendMessage(name, message, referencedMessageId, inputStream, fileName);
+	public void sendMessage(ChatMessageDto chatMessageDto) {
+		discordBot.sendMessage(chatMessageDto, memberModel.getAllianceMemberDtoList());
 	}
 }
