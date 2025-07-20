@@ -20,6 +20,8 @@ public class ChatMessage {
 	private String discordMessageId;
 	private String quoteId;
 	private String quoteDiscordId;
+	private String channelId;
+	private String channelName;
 	private String name;
 	private String message;
 	@OneToMany(mappedBy = "chatMessage")

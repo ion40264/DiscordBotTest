@@ -1,8 +1,6 @@
 package bot.service;
 
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
@@ -14,7 +12,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import bot.DiscordBotTestApplication;
 import bot.dto.AllianceMemberDto;
 import bot.dto.ChatMessageDto;
 import bot.entity.ChatAttachment;
@@ -23,9 +20,11 @@ import bot.model.discord.DIscordEventListener;
 import bot.model.discord.DiscordModel;
 import bot.repository.ChatAttachmentRepository;
 import bot.repository.ChatMessageRepository;
+import bot.util.prop.AppriCationProperties;
 
 @Service
 public class ChatService implements DIscordEventListener {
+
 	private static final Logger log = LoggerFactory.getLogger(ChatService.class);
 	@Autowired
 	private DiscordModel discordModel;
@@ -33,8 +32,9 @@ public class ChatService implements DIscordEventListener {
 	private ChatAttachmentRepository chatAttachmentRepository;
 	@Autowired
 	private ChatMessageRepository chatMessageRepository;
-
-	private List<ChatMessageDto> chatMessageDtoList= new ArrayList<>();
+	@Autowired
+	private AppriCationProperties appriCationProperties;
+	private List<ChatMessageDto> chatMessageDtoList = new ArrayList<>();
 
 	public void init() {
 		ModelMapper modelMapper = new ModelMapper();
@@ -47,67 +47,51 @@ public class ChatService implements DIscordEventListener {
 
 	@Override
 	@Transactional
-	public void onMessageReceived(AllianceMemberDto allianceMemberDto, String messageId, String message, String referencedMessageId,
-			List<String> attachmentUrlList) {
-		ChatMessageDto chatMessageDto = new ChatMessageDto();
-		chatMessageDto.setAttachmentUrlList(attachmentUrlList);
-		chatMessageDto.setCreateDate(DiscordBotTestApplication.sdf.format(new Date()));
-		chatMessageDto.setDiscordMessageId(messageId);
-		chatMessageDto.setName(allianceMemberDto.getDiscordName());
-		message = message.replace("\n", "<br>");
-		chatMessageDto.setMessage(message);
-		chatMessageDto.setQuoteDiscordId(referencedMessageId);
-		chatMessageDto.setQuoteId(getReferencedMessageIdById(referencedMessageId));
-		log.info("メッセージ:" + chatMessageDto);
+	public void onMessageReceived(ChatMessageDto chatMessageDto) {
+		if (appriCationProperties.getWebChannelId().equals(chatMessageDto.getChannelId())) {
+			String message = chatMessageDto.getMessage().replace("\n", "<br>");
+			chatMessageDto.setMessage(message);
+			log.info("ChatService:メッセージ:" + chatMessageDto);
 
-		ModelMapper modelMapper = new ModelMapper();
-		ChatMessage chatMessage = modelMapper.map(chatMessageDto, ChatMessage.class);
-		// TODO ChatMessageを保存 配下のChatAttachmentも同時に保存できるはず。うまくいかなかったので暫定
-		ChatMessage savedChatMessage = chatMessageRepository.save(chatMessage);
-		chatMessageDto.setId(savedChatMessage.getId());
-		chatMessageDtoList.addFirst(chatMessageDto);
+			// DB保存
+			ModelMapper modelMapper = new ModelMapper();
+			ChatMessage chatMessage = modelMapper.map(chatMessageDto, ChatMessage.class);
+			// TODO ChatMessageを保存 配下のChatAttachmentも同時に保存できるはず。うまくいかなかったので暫定
+			ChatMessage savedChatMessage = chatMessageRepository.save(chatMessage);
+			chatMessageDto.setId(savedChatMessage.getId());
+			chatMessageDtoList.addFirst(chatMessageDto);
 
-		if (attachmentUrlList != null && !attachmentUrlList.isEmpty()) {
-			attachmentUrlList.forEach((url) -> {
-				ChatAttachment chatAttachment = new ChatAttachment();
-				chatAttachment.setAttachmentUrl(url);
-				chatAttachment.setChatMessage(chatMessage);
-				chatAttachment.setAttachmentFileName(chatAttachment.getAttachmentFileName());
-				savedChatMessage.getChatAttachmentList().add(chatAttachment);
-				chatAttachmentRepository.save(chatAttachment);
-			});
+			if (chatMessageDto.getChatAttachmentDtoList().size() != 0) {
+				chatMessageDto.getChatAttachmentDtoList().forEach((chatAttachmentDto) -> {
+					ChatAttachment chatAttachment = new ChatAttachment();
+					chatAttachment.setAttachmentUrl(chatAttachmentDto.getAttachmentUrl());
+					chatAttachment.setChatMessage(chatMessage);
+					chatAttachment.setAttachmentFileName(chatAttachmentDto.getAttachmentFileName());
+					savedChatMessage.getChatAttachmentList().add(chatAttachment);
+					chatAttachmentRepository.save(chatAttachment);
+				});
+			}
 		}
+	}
 
+	public ChatMessageDto getChatMessageDto(long id) {
+		for (ChatMessageDto chatMessageDto : chatMessageDtoList) {
+			if (chatMessageDto.getId() == id)
+				return chatMessageDto;
+		}
+		return null;
+	}
+
+	public void sendMessage(ChatMessageDto chatMessageDto) {
+		discordModel.sendMessage(chatMessageDto);
+	}
+
+	@Override
+	public void onMessageUpdate(ChatMessageDto chatMessageDto) {
 	}
 
 	public List<ChatMessageDto> getChatMessageDtoList() {
 		return chatMessageDtoList;
-	}
-	
-	private String getIdByReferencedMessageId(Long id) {
-		String result = null;
-		for (ChatMessageDto chatMessageDto : chatMessageDtoList) {
-			if (id != null && chatMessageDto.getId() == id) {
-				result = chatMessageDto.getDiscordMessageId();
-			}
-		}
-		return result;
-	}
-	
-	private String getReferencedMessageIdById(String referencedMessageId) {
-		String result = null;
-		for (ChatMessageDto chatMessageDto : chatMessageDtoList) {
-			if (chatMessageDto.getDiscordMessageId().equals(referencedMessageId)) {
-				result = chatMessageDto.getId().toString();
-			}
-		}
-		return result;
-	}
-	
-
-	public void sendMessage(String name, String message, long referencedMessageId, InputStream inputStream,
-			String fileName) {
-		discordModel.sendMessage(name, message, getIdByReferencedMessageId(referencedMessageId), inputStream, fileName);
 	}
 
 	@Transactional
@@ -121,15 +105,9 @@ public class ChatService implements DIscordEventListener {
 				urlList.add(chatAttachment.getAttachmentUrl());
 			}
 			ChatMessageDto chatMessageDto = modelMapper.map(chatMessage, ChatMessageDto.class);
-			chatMessageDto.setAttachmentUrlList(urlList);
 			chatMessageDtoList.add(chatMessageDto);
 		}
 		return chatMessageDtoList;
-	}
-
-	@Override
-	public void onMessageUpdate(AllianceMemberDto allianceMemberDto, String messageId, String message,
-			String referencedMessageId, List<String> attachmentUrlList) {
 	}
 
 	@Override
@@ -143,4 +121,5 @@ public class ChatService implements DIscordEventListener {
 	@Override
 	public void onGuildMemberRemove(AllianceMemberDto allianceMemberDto) {
 	}
+
 }

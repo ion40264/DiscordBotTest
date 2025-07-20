@@ -5,12 +5,13 @@ import lombok.Data;
 @Data
 public class AllianceMemberDto {
 	private Long id;
+	private MemberRole memberRole = MemberRole.MEMBER;
 	private String discordMemberId;
 	private String discordName;
 	private String ayarabuId;
 	private String ayarabuName;
-	private String allianceName;
+	private MemberAlliance alliance = MemberAlliance.NONE;
 	private Integer statementCount;
 	private String createDate;
-	private boolean isBot;
+	private boolean isBot = false;
 }

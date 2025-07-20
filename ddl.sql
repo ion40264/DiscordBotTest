@@ -17,9 +17,13 @@ CREATE TABLE [alliance_member]
 	[discord_name] text,
 	[ayarabu_id] text,
 	[ayarabu_name] text,
-	[alliance_name] text,
+	[alliance] text,
 	[statement_count] integer,
-	[create_date] text
+	[create_date] text,
+	-- リーダーとか
+	[member_role] text,
+	-- 1がボット、0が普通
+	[bot] integer
 );
 
 
@@ -31,7 +35,9 @@ CREATE TABLE [chat_message]
 	[quote_id] text,
 	[name] text,
 	[message] text,
-	[create_date] text
+	[create_date] text,
+	[channel_name] text,
+	[channel_id] text
 );
 
 

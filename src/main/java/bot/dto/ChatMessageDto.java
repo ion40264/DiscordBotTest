@@ -10,8 +10,10 @@ public class ChatMessageDto {
 	private String discordMessageId;
 	private String quoteId;
 	private String quoteDiscordId;
+	private String channelId;
+	private String channelName;
 	private String name;
 	private String message;
-	private List<String> attachmentUrlList;
+	private List<ChatAttachmentDto> chatAttachmentDtoList;
 	private String createDate;
 }
