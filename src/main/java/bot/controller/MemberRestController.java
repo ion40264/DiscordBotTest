@@ -1,5 +1,6 @@
 package bot.controller;
 
+import java.util.Date;
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import bot.DiscordBotTestApplication;
 import bot.dto.AllianceMemberDto;
 import bot.form.AllianceMemberForm;
 import bot.service.MemberService;
@@ -36,12 +38,15 @@ public class MemberRestController {
 	public void postMember(@RequestBody AllianceMemberForm allianceMemberForm) {
 		log.info("メンバー追加="+allianceMemberForm);
 		ModelMapper modelMapper = new ModelMapper();
-		memberService.addAllianceMemberDto(modelMapper.map(allianceMemberForm, AllianceMemberDto.class));
+		AllianceMemberDto allianceMemberDto = modelMapper.map(allianceMemberForm, AllianceMemberDto.class);
+		allianceMemberDto.setId(null);
+		allianceMemberDto.setCreateDate(DiscordBotTestApplication.sdf.format(new Date()));
+		memberService.addAllianceMemberDto(allianceMemberDto);
 	}
 	
 	@PutMapping
 	public void putMember(@RequestBody AllianceMemberForm allianceMemberForm) {
-		log.info("メンバー更新="+allianceMemberForm);
+//		log.info("メンバー更新="+allianceMemberForm);
 		ModelMapper modelMapper = new ModelMapper();
 		memberService.updateAllianceMemberDto(modelMapper.map(allianceMemberForm, AllianceMemberDto.class));
 	}
