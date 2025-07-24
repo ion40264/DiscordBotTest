@@ -107,8 +107,13 @@ interface ChatMessage {
 	quoteDiscordId: string;
 	name: string;
 	message: string;
-	attachmentUrlList: string[];
+	chatAttachmentDtoList: ChatAttachmentDto[];
 	createDate: string;
+}
+
+interface ChatAttachmentDto {
+	attachmentUrl : string;
+	attachmentFileName : string;
 }
 
 interface MessageSize {
@@ -168,15 +173,15 @@ async function fetchAndDisplayChatMessage(
 		message.innerHTML = mainContents;
 		main.appendChild(message);
 		if (
-			chatMessage.attachmentUrlList != null &&
-			chatMessage.attachmentUrlList.length != 0
+			chatMessage.chatAttachmentDtoList != null &&
+			chatMessage.chatAttachmentDtoList.length != 0
 		) {
-			chatMessage.attachmentUrlList.forEach((url) => {
+			chatMessage.chatAttachmentDtoList.forEach((chatAttachmentDto) => {
 				const a = document.createElement("a");
-				a.href = url;
-				if (url.match(".jpg|.png|.JPG|.PNG") != null) {
+				a.href = chatAttachmentDto.attachmentUrl;
+				if (chatAttachmentDto.attachmentUrl.match(".jpg|.png|.JPG|.PNG") != null) {
 					const img = document.createElement("img") as HTMLImageElement;
-					img.src = url;
+					img.src = chatAttachmentDto.attachmentUrl;
 					img.width = 300;
 					a.appendChild(img);
 				} else {
