@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import bot.dto.AllianceMemberDto;
+import bot.dto.ChatAttachmentDto;
 import bot.dto.ChatMessageDto;
 import bot.entity.ChatAttachment;
 import bot.entity.ChatMessage;
@@ -100,11 +101,15 @@ public class ChatService implements DIscordEventListener {
 		List<ChatMessage> chatMessageList = chatMessageRepository.findAllByOrderByIdDesc(pageable).getContent();
 		ModelMapper modelMapper = new ModelMapper();
 		for (ChatMessage chatMessage : chatMessageList) {
-			List<String> urlList = new ArrayList<String>();
+			List<ChatAttachmentDto> chatAttachmentDtoList = new ArrayList<ChatAttachmentDto>();
 			for (ChatAttachment chatAttachment : chatMessage.getChatAttachmentList()) {
-				urlList.add(chatAttachment.getAttachmentUrl());
+				ChatAttachmentDto chatAttachmentDto = new ChatAttachmentDto();
+				chatAttachmentDto.setAttachmentFileName(chatAttachment.getAttachmentFileName());
+				chatAttachmentDto.setAttachmentUrl(chatAttachment.getAttachmentUrl());
+				chatAttachmentDtoList.add(chatAttachmentDto);
 			}
 			ChatMessageDto chatMessageDto = modelMapper.map(chatMessage, ChatMessageDto.class);
+			chatMessageDto.setChatAttachmentDtoList(chatAttachmentDtoList);
 			chatMessageDtoList.add(chatMessageDto);
 		}
 		return chatMessageDtoList;
