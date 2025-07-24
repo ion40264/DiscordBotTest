@@ -5,6 +5,8 @@
 	<meta charset="UTF-8">
 	<title>メンバー一覧</title>
 	<script type="module" src="./js/main.js"></script>
+	<meta name="_csrf" th:content="${_csrf.token}"/>
+	<meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 	<link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -27,6 +29,7 @@
 		<tbody>
 		</tbody>
 	</table>
+	<input type="button" id="saveButton" value="save">
 	<hr>
 	<form>
 		ID:<input type="text" id="deleteInput"><input type="button" id="deleteButton" value="メンバー削除">

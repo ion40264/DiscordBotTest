@@ -1,0 +1,1 @@
+update alliance_member set ayarabu_name='イオン', ayarabu_id='90896709', member_role='SUB_LEADER' where discord_name='ion';

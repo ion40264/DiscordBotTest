@@ -4,6 +4,8 @@
 <head>
 	<title>discordとのチャット同期</title>
 	<script type="module" src="./js/main.js"></script>
+	<meta name="_csrf" th:content="${_csrf.token}"/>
+	<meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 	<link rel="stylesheet" href="css/style.css">
 </head>
 

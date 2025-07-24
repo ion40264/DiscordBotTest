@@ -1,5 +1,15 @@
 import axios from "axios";
 
+let ele = document.querySelector("meta[name='_csrf']") as HTMLElement;
+const csrfToken = ele.getAttribute("content") as string;
+ele = document.querySelector("meta[name='_csrf_header']") as HTMLElement;
+const csrfHeader = ele.getAttribute("content") as string;
+if (csrfToken && csrfHeader) {
+	axios.defaults.headers.common[csrfHeader] = csrfToken;
+} else {
+	console.warn("CSRFトークンまたはヘッダー名が見つかりませんでした。CSRF保護が正しく機能しない可能性があります。");
+}
+
 const chatMessageContainer = document.getElementById(
 	"chatMessageContainer"
 ) as HTMLDivElement;
@@ -40,14 +50,16 @@ function initChat() {
 
 function initMember() {
 	fetchAndDisplayMember();
-	const button = document.getElementById("deleteButton") as 	HTMLInputElement;
+	const button = document.getElementById("deleteButton") as HTMLInputElement;
 	button.onclick = onDeleteMember;
-const addButton = document.getElementById("addButton") as 	HTMLInputElement;
-addButton.onclick = onDeleteMember;
+	const addButton = document.getElementById("addButton") as HTMLInputElement;
+	addButton.onclick = onAddMember;
+	const saveButton = document.getElementById("saveButton") as HTMLInputElement;
+	saveButton.onclick = onSaveMember;
 }
-async function onDeleteMember(): Promise <void> {
-	const deleteInput = document.getElementById("deleteInput") as 	HTMLInputElement;
-	const memberIdToDelete: number = parseInt(deleteInput.value, 10); 
+async function onDeleteMember(): Promise<void> {
+	const deleteInput = document.getElementById("deleteInput") as HTMLInputElement;
+	const memberIdToDelete: number = parseInt(deleteInput.value, 10);
 	await axios.delete(`/member/` + memberIdToDelete);
 	fetchAndDisplayMember();
 }
@@ -58,14 +70,14 @@ async function onAddMember(): Promise<void> {
 		return;
 	}
 	const memberData: AllianceMemberForm = {
-		id:  -1, // 新規追加のため仮のID
+		id: -1, // 新規追加のため仮のID
 		memberRole: "MEMBER",
 		discordMemberId: "",
-		discordName:"",
+		discordName: "",
 		ayarabuId: "",
 		ayarabuName: ayarabuInput.value,
 		alliance: "NONE",
-		statementCount : 0,
+		statementCount: 0,
 		createDate: "",
 		isBot: 0
 	};
@@ -95,8 +107,13 @@ interface ChatMessage {
 	quoteDiscordId: string;
 	name: string;
 	message: string;
-	attachmentUrlList: string[];
+	chatAttachmentDtoList: ChatAttachmentDto[];
 	createDate: string;
+}
+
+interface ChatAttachmentDto {
+	attachmentUrl : string;
+	attachmentFileName : string;
 }
 
 interface MessageSize {
@@ -156,15 +173,15 @@ async function fetchAndDisplayChatMessage(
 		message.innerHTML = mainContents;
 		main.appendChild(message);
 		if (
-			chatMessage.attachmentUrlList != null &&
-			chatMessage.attachmentUrlList.length != 0
+			chatMessage.chatAttachmentDtoList != null &&
+			chatMessage.chatAttachmentDtoList.length != 0
 		) {
-			chatMessage.attachmentUrlList.forEach((url) => {
+			chatMessage.chatAttachmentDtoList.forEach((chatAttachmentDto) => {
 				const a = document.createElement("a");
-				a.href = url;
-				if (url.match(".jpg|.png|.JPG|.PNG") != null) {
+				a.href = chatAttachmentDto.attachmentUrl;
+				if (chatAttachmentDto.attachmentUrl.match(".jpg|.png|.JPG|.PNG") != null) {
 					const img = document.createElement("img") as HTMLImageElement;
-					img.src = url;
+					img.src = chatAttachmentDto.attachmentUrl;
 					img.width = 300;
 					a.appendChild(img);
 				} else {
@@ -300,75 +317,55 @@ async function fetchAndDisplayMember(): Promise<void> {
 	                `;
 
 		memberTable.appendChild(row);
-
-		// 変更を検知してPUTリクエストを送信
-		const doc = document.getElementById("memberTable") as HTMLElement;
-		doc.addEventListener("focusout", async (event) => {
-			// 汎用的なHTMLElementとして扱う
-			const targetElement = event.target as HTMLElement;
-
-			// 編集可能なセルからフォーカスが外れたことを確認
-			if (
-				targetElement.tagName === "TD" &&
-				targetElement.getAttribute("contenteditable") === "true"
-			) {
-				const targetCell = targetElement as HTMLTableCellElement;
-				const row = targetCell.closest("tr") as HTMLTableRowElement;
-				const rowId: string = row.dataset.id + "";
-
-				const updateMember: Member = {
-					id: parseInt(rowId),
-					memberRole: row.cells[1].textContent || "",
-					discordMemberId: row.cells[2].textContent || "",
-					discordName: row.cells[3].textContent || "",
-					ayarabuId: row.cells[4].textContent || "",
-					ayarabuName: row.cells[5].textContent || "",
-					alliance: row.cells[6].textContent || "",
-					statementCount: parseInt(row.cells[7].textContent || "0", 10),
-					createDate: row.cells[8].textContent || "",
-				};
-
-				console.log("updateMEmber:", updateMember);
-				await axios.put<Member>(`/member`, updateMember, {});
-			} else if (targetElement.className === "memberRoleSelect") {
-				const selectElement = targetElement as HTMLSelectElement;
-				const row = selectElement.closest("tr") as HTMLTableRowElement;
-				const rowId: string = row.dataset.id + "";
-
-				const updateMember: Member = {
-					id: parseInt(rowId),
-					memberRole: selectElement.value,
-					discordMemberId: row.cells[2].textContent || "",
-					discordName: row.cells[3].textContent || "",
-					ayarabuId: row.cells[4].textContent || "",
-					ayarabuName: row.cells[5].textContent || "",
-					alliance: row.cells[5].textContent || "",
-					statementCount: parseInt(row.cells[7].textContent || "0", 10),
-					createDate: row.cells[8].textContent || "",
-				};
-
-				console.log("updateMEmber:", updateMember);
-				await axios.put<Member>(`/member`, updateMember, {});
-			} else if (targetElement.className === "memberAllianceSelect") {
-				const selectElement = targetElement as HTMLSelectElement;
-				const row = selectElement.closest("tr") as HTMLTableRowElement;
-				const rowId: string = row.dataset.id + "";
-
-				const updateMember: Member = {
-					id: parseInt(rowId),
-					memberRole: selectElement.value,
-					discordMemberId: row.cells[2].textContent || "",
-					discordName: row.cells[3].textContent || "",
-					ayarabuId: row.cells[4].textContent || "",
-					ayarabuName: row.cells[5].textContent || "",
-					alliance: selectElement.value,
-					statementCount: parseInt(row.cells[7].textContent || "0", 10),
-					createDate: row.cells[8].textContent || "",
-				};
-
-				console.log("updateMEmber:", updateMember);
-				await axios.put<Member>(`/member`, updateMember, {});
-			}
-		});
 	});
 }
+
+async function onSaveMember(): Promise<void> {
+	const table: HTMLTableElement = document.getElementById("memberTable") as HTMLTableElement;
+	const tableRows: HTMLCollectionOf<HTMLTableRowElement> = table.rows;
+
+	// 要素を一つずつ処理
+	for (let i = 1; i < tableRows.length; i++) {
+		const row: HTMLTableRowElement = tableRows.item(i) as HTMLTableRowElement; // または listItems[i]
+		const rowId: string = row.dataset.id + "";
+
+		let selectElements : HTMLCollectionOf<HTMLSelectElement>;
+		let selectElement: HTMLSelectElement;
+		selectElements = row.cells[1].children as HTMLCollectionOf<HTMLSelectElement>;
+		let memberRoleStr : string = "MEMBER";
+		for (let i = 0; i < selectElements.length; i++) {
+			if (selectElements[i].tagName === 'SELECT') {
+				selectElement = selectElements[i];
+				memberRoleStr = selectElement.value;
+			}
+		}
+		selectElements = row.cells[1].children as HTMLCollectionOf<HTMLSelectElement>;
+		let allianceStr : string = "NONE";
+		for (let i = 0; i < selectElements.length; i++) {
+			if (selectElements[i].tagName === 'SELECT') {
+				selectElement = selectElements[i];
+				allianceStr = selectElement.value;
+			}
+		}
+		const updateMember: Member = {
+			id: parseInt(row.cells[0].textContent || "0", 10),
+			memberRole: memberRoleStr,
+			discordMemberId: row.cells[2].textContent || "",
+			discordName: row.cells[3].textContent || "",
+			ayarabuId: row.cells[4].textContent || "",
+			ayarabuName: row.cells[5].textContent || "",
+			alliance: allianceStr,
+			statementCount: parseInt(row.cells[7].textContent || "0", 10),
+			createDate: row.cells[8].textContent || "",
+		};
+
+		console.log("updateMEmber:", updateMember);
+		await axios.put<Member>(`/member`, updateMember, {}).then(function(response) {
+			fetchAndDisplayMember();
+		});
+	}
+
+}
+
+
+
