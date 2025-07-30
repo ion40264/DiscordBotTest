@@ -14,7 +14,9 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import bot.DiscordBotTestApplication;
 import bot.dto.ChatAttachmentDto;
@@ -31,23 +33,27 @@ public class ChatRestController {
 	private ChatService chatService;
 
 	@GetMapping("/pageable")
-	public List<ChatMessageDto> getAllChatsPageable(@PageableDefault(size = 20) Pageable pageable) {
-		return chatService.getChatMessageDtoList(pageable);
+	public List<ChatMessageDto> getAllChatsPageable(@RequestParam String channelId,
+			@PageableDefault(size = 20) Pageable pageable) {
+		return chatService.getChatMessageDtoList(channelId, pageable);
 	}
+
 	@GetMapping
 	public List<ChatMessageDto> getAllChats() {
 		return chatService.getChatMessageDtoList();
 	}
+
 	@GetMapping("/size")
 	public MessageSizeDto getSize() {
 		MessageSizeDto messageSizeDto = new MessageSizeDto();
-		messageSizeDto.setSize( chatService.getChatMessageDtoList().size());
+		messageSizeDto.setSize(chatService.getChatMessageDtoList().size());
 		return messageSizeDto;
 	}
 
 	@PostMapping
 	public void postMessage(MessageForm messageForm) {
 		try {
+			log.info("messageForm=" + messageForm);
 			chatService.sendMessage(toChatMessageDtoFromForm(messageForm));
 		} catch (Exception e) {
 			log.error("メッセージの送信で失敗しました。messageForm=" + messageForm, e);
@@ -58,29 +64,34 @@ public class ChatRestController {
 		ChatMessageDto chatMessageDto = new ChatMessageDto();
 		chatMessageDto.setCreateDate(DiscordBotTestApplication.sdf.format(new Date()));
 		chatMessageDto.setDiscordMessageId(null);
+		chatMessageDto.setChannelId(messageForm.getChannelId());
 		chatMessageDto.setMessage(messageForm.getMessage());
 		chatMessageDto.setName(messageForm.getName());
 		if (messageForm.getReferencedMessageId() != null && !messageForm.getReferencedMessageId().isEmpty()) {
-			ChatMessageDto refChatMessageDto = chatService.getChatMessageDto(Long.parseLong(messageForm.getReferencedMessageId().trim()));
+			ChatMessageDto refChatMessageDto = chatService
+					.getChatMessageDto(Long.parseLong(messageForm.getReferencedMessageId().trim()));
 			chatMessageDto.setQuoteDiscordId(refChatMessageDto.getDiscordMessageId());
 			chatMessageDto.setQuoteId(refChatMessageDto.getId().toString());
 		}
-		
-		if (messageForm.getMultipartFileList() == null)
-			messageForm.setMultipartFileList(new ArrayList<>());
+
 		List<ChatAttachmentDto> chatAttachmentDtoList = new ArrayList<ChatAttachmentDto>();
-		messageForm.getMultipartFileList().forEach(multipartFile ->{
-			ChatAttachmentDto chatAttachmentDto = new ChatAttachmentDto();
-			try {
-				chatAttachmentDto.setAttachmentFileInputStream(multipartFile.getInputStream());
-				chatAttachmentDto.setAttachmentFileName(multipartFile.getName());
-				chatAttachmentDto.setAttachmentUrl(null);
-				chatAttachmentDtoList.add(chatAttachmentDto);
-			} catch (IOException e) {
-				log.error("添付ファイルの処理に失敗しました。", e);
+		if (messageForm.getMultipartFiles() != null) {
+			for (int i = 0; i < messageForm.getMultipartFiles().length; i++) {
+				MultipartFile multipartFile = messageForm.getMultipartFiles()[i];
+				ChatAttachmentDto chatAttachmentDto = new ChatAttachmentDto();
+				try {
+					chatAttachmentDto.setAttachmentFileInputStream(multipartFile.getInputStream());
+					chatAttachmentDto.setAttachmentFileName(multipartFile.getOriginalFilename());
+					chatAttachmentDto.setAttachmentUrl(null);
+					chatAttachmentDtoList.add(chatAttachmentDto);
+				} catch (IOException e) {
+					log.error("添付ファイルの処理に失敗しました。", e);
+				}
+
 			}
-		});
-		
+		}
+		chatMessageDto.setChatAttachmentDtoList(chatAttachmentDtoList);
+
 		return chatMessageDto;
 	}
 }

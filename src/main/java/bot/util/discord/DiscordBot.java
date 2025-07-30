@@ -26,10 +26,8 @@ import net.dv8tion.jda.api.utils.MemberCachePolicy;
 
 @Component
 public class DiscordBot {
-	private static final Logger log = LoggerFactory.getLogger(DiscordBot.class);
+	Logger log = LoggerFactory.getLogger(DiscordBot.class);
 	private JDA jda;
-	private TextChannel textChannel;
-	private TextChannel webTextChannel;
 	private Guild guild;
 	@Autowired
 	private AppriCationProperties appriCationProperties;
@@ -50,8 +48,6 @@ public class DiscordBot {
 			jda.awaitReady();
 
 			guild = jda.getGuildById(appriCationProperties.getGuildId());
-			textChannel = guild.getTextChannelById(appriCationProperties.getChannelId());
-			webTextChannel = guild.getTextChannelById(appriCationProperties.getWebChannelId());
 		} catch (Exception e) {
 			throw new RuntimeException("DiscordBot初期化エラー.", e);
 		}
@@ -74,12 +70,8 @@ public class DiscordBot {
 		return guild;
 	}
 
-	public TextChannel getTextChannel() {
-		return textChannel;
-	}
-
-	public TextChannel getWebTextChannel() {
-		return webTextChannel;
+	public TextChannel getChannel(String channelId) {
+		return guild.getTextChannelById(channelId);
 	}
 
 	public void sendMessage(ChatMessageDto chatMessageDto, List<AllianceMemberDto> allianceMemberDtoList) {
@@ -112,7 +104,7 @@ public class DiscordBot {
 		if (replaceMessage.isEmpty())
 			replaceMessage = message;
 
-		MessageCreateAction messageCreateAction = getWebTextChannel().sendMessage(replaceMessage);
+		MessageCreateAction messageCreateAction = getChannel(chatMessageDto.getChannelId()).sendMessage(replaceMessage);
 		if (chatMessageDto.getQuoteDiscordId() != null && !chatMessageDto.getQuoteDiscordId().isEmpty())
 			messageCreateAction.setMessageReference(chatMessageDto.getQuoteDiscordId());
 		if (chatMessageDto.getChatAttachmentDtoList() != null) {

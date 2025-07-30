@@ -1,5 +1,8 @@
 import axios from "axios";
 
+const channelElement = document.getElementById("channelId") as HTMLInputElement;
+const channelId :string = channelElement.value;
+
 let ele = document.querySelector("meta[name='_csrf']") as HTMLElement;
 const csrfToken = ele.getAttribute("content") as string;
 ele = document.querySelector("meta[name='_csrf_header']") as HTMLElement;
@@ -100,11 +103,20 @@ interface AllianceMemberForm {
 
 // --- 1. 取得するデータの型定義 ---
 // APIから返されるユーザーデータの構造を定義します
-interface ChatMessage {
+interface Channel {
+	id:number;
+	channelId : string;
+	channelName : string;
+	chatMessageList : ChatMessageDto[];
+}
+
+interface ChatMessageDto {
 	id: number;
 	discordMessageId: string;
 	quoteId: string;
 	quoteDiscordId: string;
+	channelId : string;
+	channelName:string;
 	name: string;
 	message: string;
 	chatAttachmentDtoList: ChatAttachmentDto[];
@@ -127,8 +139,6 @@ interface MessageSize {
 async function fetchAndDisplayChatMessage(
 	resetFlag: boolean = false
 ): Promise<void> {
-	//	const messageSizeResponse = await axios.get<MessageSize>(`/chat/size`);
-	//	maxSize = messageSizeResponse.data.size;
 	// Axiosを使って全ユーザーデータを取得します
 	// レスポンスのデータ部分の型を `User[]` (Userオブジェクトの配列) として指定します
 	if (page === 0 || resetFlag) {
@@ -137,15 +147,17 @@ async function fetchAndDisplayChatMessage(
 
 		loadingMoreIndicator.innerHTML = "ロード中...";
 	}
-	const response = await axios.get<ChatMessage[]>(
-		`/chat/pageable?page=${page}&size=${size}`
+	const response = await axios.get<ChatMessageDto[]>(
+		`/chat/pageable?page=${page}&size=${size}&channelId=${channelId}`
 	);
-	const chatMessages: ChatMessage[] = response.data; // 取得したデータ
+	const chatMessages: ChatMessageDto[] = response.data; // 取得したデータ
 
 	const loading = document.createElement("div");
 	// 読み込み中のメッセージをクリアします
 	// 取得したユーザーデータを元にDOMを操作します
 	chatMessages.forEach((chatMessage) => {
+		if (chatMessage.channelId != channelId)
+			return;
 		// --- 4. DOM操作: ユーザーごとにカード要素を作成 ---
 		const messageDiv = document.createElement("div") as HTMLDivElement;
 		messageDiv.className = "messageDiv";
@@ -223,18 +235,21 @@ async function onPostMessage(): Promise<void> {
 	) as HTMLInputElement;
 	const multipartFileList: FileList = fileElement.files as FileList;
 	if (multipartFileList && multipartFileList.length !== 0) {
-		const multipartFile: File = multipartFileList[0];
-		const fileName: string = multipartFile.name;
-		formData.append("multipartFile", multipartFile);
-		formData.append("fileName", fileName);
+		for (let i = 0; i < multipartFileList.length; i++) {
+		  formData.append('multipartFiles', multipartFileList[i]);
+		}
 	}
 
+	formData.append("channelId", channelId);
 	formData.append("name", name);
 	formData.append("message", message);
 	formData.append("referencedMessageId", referencedMessageId);
 
 	// Axiosでリクエスト送信
-	await axios.post("/chat", formData, {}).then(function(response) {
+	await axios.post("/chat", formData, {
+		headers: {
+			'Content-Type': 'multipart/form-data'
+	 }}).then(function(response) {
 		window.setTimeout(resetAndDisplayChatMessage, 500);
 	});
 }

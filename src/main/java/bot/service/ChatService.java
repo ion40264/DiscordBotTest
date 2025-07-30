@@ -1,6 +1,7 @@
 package bot.service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
@@ -15,13 +16,14 @@ import org.springframework.transaction.annotation.Transactional;
 import bot.dto.AllianceMemberDto;
 import bot.dto.ChatAttachmentDto;
 import bot.dto.ChatMessageDto;
+import bot.entity.Channel;
 import bot.entity.ChatAttachment;
 import bot.entity.ChatMessage;
 import bot.model.discord.DIscordEventListener;
 import bot.model.discord.DiscordModel;
+import bot.repository.ChannelRepository;
 import bot.repository.ChatAttachmentRepository;
 import bot.repository.ChatMessageRepository;
-import bot.util.prop.AppriCationProperties;
 
 @Service
 public class ChatService implements DIscordEventListener {
@@ -30,48 +32,59 @@ public class ChatService implements DIscordEventListener {
 	@Autowired
 	private DiscordModel discordModel;
 	@Autowired
+	private ChannelRepository channelRepository;
+	@Autowired
 	private ChatAttachmentRepository chatAttachmentRepository;
 	@Autowired
 	private ChatMessageRepository chatMessageRepository;
-	@Autowired
-	private AppriCationProperties appriCationProperties;
+//	@Autowired
+//	private AppriCationProperties appriCationProperties;
 	private List<ChatMessageDto> chatMessageDtoList = new ArrayList<>();
 
 	public void init() {
 		ModelMapper modelMapper = new ModelMapper();
-		chatMessageDtoList = modelMapper.map(chatMessageRepository.findAllByOrderByIdDesc(),
-				new TypeToken<List<ChatMessageDto>>() {
-				}.getType());
-		if (chatMessageDtoList == null)
-			chatMessageDtoList = new ArrayList<>();
+		List<Channel> channelList = channelRepository.findAll();
+		channelList.forEach(channel->{
+			if (channel.getChatMessageList() == null)
+				return;
+			chatMessageDtoList = modelMapper.map(channel.getChatMessageList(),
+					new TypeToken<List<ChatMessageDto>>() {
+					}.getType());
+			chatMessageDtoList.forEach(chatMessageDto->{
+				chatMessageDto.setChannelId(channel.getChannelId());
+				chatMessageDto.setChannelName(channel.getChannelName());
+			});
+			if (chatMessageDtoList == null)
+				chatMessageDtoList = new ArrayList<>();
+		});
 	}
 
 	@Override
 	@Transactional
 	public void onMessageReceived(ChatMessageDto chatMessageDto) {
-		if (appriCationProperties.getWebChannelId().equals(chatMessageDto.getChannelId())) {
-			String message = chatMessageDto.getMessage().replace("\n", "<br>");
-			chatMessageDto.setMessage(message);
-			log.info("ChatService:メッセージ:" + chatMessageDto);
+		Channel channel = channelRepository.findByChannelId(chatMessageDto.getChannelId());
+		String message = chatMessageDto.getMessage().replace("\n", "<br>");
+		chatMessageDto.setMessage(message);
+		log.info("ChatService:メッセージ:" + chatMessageDto);
 
-			// DB保存
-			ModelMapper modelMapper = new ModelMapper();
-			ChatMessage chatMessage = modelMapper.map(chatMessageDto, ChatMessage.class);
-			// TODO ChatMessageを保存 配下のChatAttachmentも同時に保存できるはず。うまくいかなかったので暫定
-			ChatMessage savedChatMessage = chatMessageRepository.save(chatMessage);
-			chatMessageDto.setId(savedChatMessage.getId());
-			chatMessageDtoList.addFirst(chatMessageDto);
+		// DB保存
+		ModelMapper modelMapper = new ModelMapper();
+		ChatMessage chatMessage = modelMapper.map(chatMessageDto, ChatMessage.class);
+		chatMessage.setChannel(channel);
+		// TODO ChatMessageを保存 配下のChatAttachmentも同時に保存できるはず。うまくいかなかったので暫定
+		ChatMessage savedChatMessage = chatMessageRepository.save(chatMessage);
+		chatMessageDto.setId(savedChatMessage.getId());
+		chatMessageDtoList.addFirst(chatMessageDto);
 
-			if (chatMessageDto.getChatAttachmentDtoList().size() != 0) {
-				chatMessageDto.getChatAttachmentDtoList().forEach((chatAttachmentDto) -> {
-					ChatAttachment chatAttachment = new ChatAttachment();
-					chatAttachment.setAttachmentUrl(chatAttachmentDto.getAttachmentUrl());
-					chatAttachment.setChatMessage(chatMessage);
-					chatAttachment.setAttachmentFileName(chatAttachmentDto.getAttachmentFileName());
-					savedChatMessage.getChatAttachmentList().add(chatAttachment);
-					chatAttachmentRepository.save(chatAttachment);
-				});
-			}
+		if (chatMessageDto.getChatAttachmentDtoList().size() != 0) {
+			chatMessageDto.getChatAttachmentDtoList().forEach((chatAttachmentDto) -> {
+				ChatAttachment chatAttachment = new ChatAttachment();
+				chatAttachment.setAttachmentUrl(chatAttachmentDto.getAttachmentUrl());
+				chatAttachment.setChatMessage(chatMessage);
+				chatAttachment.setAttachmentFileName(chatAttachmentDto.getAttachmentFileName());
+				savedChatMessage.getChatAttachmentList().add(chatAttachment);
+				chatAttachmentRepository.save(chatAttachment);
+			});
 		}
 	}
 
@@ -96,9 +109,10 @@ public class ChatService implements DIscordEventListener {
 	}
 
 	@Transactional
-	public List<ChatMessageDto> getChatMessageDtoList(Pageable pageable) {
+	public List<ChatMessageDto> getChatMessageDtoList(String channelId, Pageable pageable) {
+		Channel channel = channelRepository.findByChannelId(channelId);
 		List<ChatMessageDto> chatMessageDtoList = new ArrayList<>();
-		List<ChatMessage> chatMessageList = chatMessageRepository.findAllByOrderByIdDesc(pageable).getContent();
+		List<ChatMessage> chatMessageList = channel.getChatMessageList();
 		ModelMapper modelMapper = new ModelMapper();
 		for (ChatMessage chatMessage : chatMessageList) {
 			List<ChatAttachmentDto> chatAttachmentDtoList = new ArrayList<ChatAttachmentDto>();
@@ -109,9 +123,13 @@ public class ChatService implements DIscordEventListener {
 				chatAttachmentDtoList.add(chatAttachmentDto);
 			}
 			ChatMessageDto chatMessageDto = modelMapper.map(chatMessage, ChatMessageDto.class);
+			chatMessageDto.setChannelId(channelId);
+			chatMessageDto.setChannelName(channel.getChannelName());
 			chatMessageDto.setChatAttachmentDtoList(chatAttachmentDtoList);
 			chatMessageDtoList.add(chatMessageDto);
 		}
+		chatMessageDtoList.sort(Comparator.comparing(ChatMessageDto::getDiscordMessageId).reversed());
+
 		return chatMessageDtoList;
 	}
 

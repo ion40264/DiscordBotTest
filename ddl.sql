@@ -4,6 +4,7 @@
 DROP TABLE [alliance_member];
 DROP TABLE [chat_attachment];
 DROP TABLE [chat_message];
+DROP TABLE [channel];
 
 
 
@@ -27,6 +28,14 @@ CREATE TABLE [alliance_member]
 );
 
 
+CREATE TABLE [channel]
+(
+	[id] integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+	[channel_name] text,
+	[channel_id] text
+);
+
+
 CREATE TABLE [chat_message]
 (
 	[id] integer NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -36,8 +45,9 @@ CREATE TABLE [chat_message]
 	[name] text,
 	[message] text,
 	[create_date] text,
-	[channel_name] text,
-	[channel_id] text
+	[channel_id] integer NOT NULL,
+	FOREIGN KEY ([channel_id])
+	REFERENCES [channel] ([id])
 );
 
 

@@ -15,8 +15,8 @@ public class ChatAttachment {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	@ManyToOne // ChatMessage への多対一関係を定義
-	@JoinColumn(name = "chat_message_id") // 外部キーカラムを指定
+	@ManyToOne
+	@JoinColumn(name = "chat_message_id")
 	private ChatMessage chatMessage;
 	private String attachmentUrl;
 	private String attachmentFileName;

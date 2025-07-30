@@ -14,9 +14,11 @@ import org.springframework.stereotype.Component;
 import bot.dto.AllianceMemberDto;
 import bot.dto.ChatAttachmentDto;
 import bot.dto.ChatMessageDto;
+import bot.entity.Channel;
 import bot.entity.ChatAttachment;
 import bot.entity.ChatMessage;
 import bot.model.MemberModel;
+import bot.repository.ChannelRepository;
 import bot.repository.ChatAttachmentRepository;
 import bot.repository.ChatMessageRepository;
 import bot.util.discord.DiscordBot;
@@ -44,6 +46,8 @@ public class DiscordModel extends ListenerAdapter {
 	private ChatMessageRepository chatMessageRepository;
 	@Autowired
 	private ChatAttachmentRepository chatAttachmentRepository;
+	@Autowired
+	private ChannelRepository channelRepository;
 	private List<DIscordEventListener> dIscordEventListenerList = new ArrayList<DIscordEventListener>();
 
 	private boolean endFlag = false;
@@ -85,73 +89,76 @@ public class DiscordModel extends ListenerAdapter {
 	}
 
 	public void getHistory(int limit) {
-		endFlag = true;
-		String messageId;
-		ChatMessageDto chatMessageDto = new ChatMessageDto();
-		chatMessageDto.setName("ボット");
-		chatMessageDto.setMessage("ボット起動");
-		sendMessage(chatMessageDto);
-		// TODO 気に食わない
-		try {
-			Thread.sleep(1000L);
-		} catch (InterruptedException e) {
-		}
-		Optional<ChatMessage> optional = chatMessageRepository.findById(1L);
-		if (!optional.isEmpty()) {
-			messageId = optional.get().getDiscordMessageId();
-			discordBot.getWebTextChannel().getHistoryBefore(messageId, limit).queue(
-					history -> {
-						messageList = history.getRetrievedHistory();
-						log.info("基準メッセージ (" + messageId + ") より前のメッセージ " + messageList.size()
-								+ " 件を取得しました。");
-						endFlag = false;
+		List<bot.entity.Channel> channelList = channelRepository.findAll();
+		channelList.forEach(channel->{
+			endFlag = true;
+			String messageId;
+			ChatMessageDto chatMessageDto = new ChatMessageDto();
+			chatMessageDto.setChannelId(channel.getChannelId());
+			chatMessageDto.setChannelName(channel.getChannelName());
+			chatMessageDto.setName("ボット");
+			chatMessageDto.setMessage("ボット起動");
+			sendMessage(chatMessageDto);
+			// TODO 気に食わない
+			try {
+				Thread.sleep(1000L);
+			} catch (InterruptedException e) {
+			}
+			Optional<ChatMessage> optional = chatMessageRepository.findById(1L);
+			if (!optional.isEmpty()) {
+				messageId = optional.get().getDiscordMessageId();
+				discordBot.getChannel(channel.getChannelId()).getHistoryBefore(messageId, limit).queue(
+						history -> {
+							messageList = history.getRetrievedHistory();
+							log.info("基準メッセージ (" + messageId + ") より前のメッセージ " + messageList.size()
+									+ " 件を取得しました。");
+							endFlag = false;
 
-					});
-			// TODO すっげーいやな書き方。。
-			while (endFlag) {
-				try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
+						});
+				// TODO すっげーいやな書き方。。
+				while (endFlag) {
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+					}
 				}
 			}
-		} else {
-			messageList = discordBot.getWebTextChannel().getHistory().getRetrievedHistory();
-			messageId = "";
-		}
 
-		// 取得したメッセージのリストは、古い順に並んでいるのでソート
-		List<Message> sortMessageList = new ArrayList<>();
-		sortMessageList.addAll(messageList);
-		sortMessageList.sort(Comparator.comparing(Message::getIdLong));
-		for (Message message : sortMessageList) {
-			if (chatMessageRepository.findByDiscordMessageId(message.getId()) != null)
-				continue;
-			ChatMessage chatMessage = new ChatMessage();
-			// TODO 日付の文字列型変換は共通に抜き出したい
-			chatMessage
-					.setCreateDate(message.getTimeCreated().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
-			chatMessage.setDiscordMessageId(message.getId());
-			chatMessage.setMessage(message.getContentDisplay().replace("\n", "<br>"));
-			chatMessage.setName(getName(message.getMember()));
-			if (message.getReferencedMessage() != null)
-				chatMessage.setQuoteDiscordId(message.getReferencedMessage().getId());
-			chatMessage.setQuoteId(null);
-			chatMessage.setChannelId(message.getChannelId());
-			chatMessage.setChannelName(message.getChannel().getName());
-			chatMessageRepository.save(chatMessage);
-			message.getAttachments().forEach((attachment) -> {
-				ChatAttachment chatAttachment = new ChatAttachment();
-				chatAttachment.setAttachmentUrl(attachment.getUrl());
-				chatAttachment.setChatMessage(chatMessage);
-				chatAttachment.setAttachmentFileName(attachment.getFileName());
-				chatAttachmentRepository.save(chatAttachment);
-			});
-			ChatMessage quoteChatMessage = chatMessageRepository
-					.findByDiscordMessageId(chatMessage.getQuoteDiscordId());
-			if (quoteChatMessage != null)
-				chatMessage.setQuoteId(quoteChatMessage.getId().toString());
-			chatMessageRepository.save(chatMessage);
-		}
+			// 取得したメッセージのリストは、古い順に並んでいるのでソート
+			List<Message> sortMessageList = new ArrayList<>();
+			sortMessageList.addAll(messageList);
+			sortMessageList.sort(Comparator.comparing(Message::getIdLong));
+			for (Message message : sortMessageList) {
+				if (chatMessageRepository.findByDiscordMessageId(message.getId()) != null)
+					continue;
+				Channel channel2 = channelRepository.findByChannelId(message.getChannelId());
+				ChatMessage chatMessage = new ChatMessage();
+				// TODO 日付の文字列型変換は共通に抜き出したい
+				chatMessage
+						.setCreateDate(message.getTimeCreated().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+				chatMessage.setDiscordMessageId(message.getId());
+				chatMessage.setMessage(message.getContentDisplay().replace("\n", "<br>"));
+				chatMessage.setName(getName(message.getMember()));
+				chatMessage.setChannel(channel2);
+				if (message.getReferencedMessage() != null)
+					chatMessage.setQuoteDiscordId(message.getReferencedMessage().getId());
+				chatMessage.setQuoteId(null);
+				chatMessageRepository.save(chatMessage);
+				message.getAttachments().forEach((attachment) -> {
+					ChatAttachment chatAttachment = new ChatAttachment();
+					chatAttachment.setAttachmentUrl(attachment.getUrl());
+					chatAttachment.setChatMessage(chatMessage);
+					chatAttachment.setAttachmentFileName(attachment.getFileName());
+					chatAttachmentRepository.save(chatAttachment);
+				});
+				ChatMessage quoteChatMessage = chatMessageRepository
+						.findByDiscordMessageId(chatMessage.getQuoteDiscordId());
+				if (quoteChatMessage != null)
+					chatMessage.setQuoteId(quoteChatMessage.getId().toString());
+				chatMessageRepository.save(chatMessage);
+			}
+			
+		});
 	}
 
 	public void adddIscordEventListener(DIscordEventListener dIscordEventListener) {
