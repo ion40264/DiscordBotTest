@@ -19,6 +19,8 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 import net.dv8tion.jda.api.utils.FileUpload;
@@ -57,7 +59,7 @@ public class DiscordBot {
 	public void shutDown() {
 		jda.shutdown();
 	}
-	public String getMention(String discordUserId) {
+	private String getMention(String discordUserId) {
 		User user = jda.retrieveUserById(discordUserId).complete();
 		String mention = null;
 		if (user != null) {
@@ -81,6 +83,62 @@ public class DiscordBot {
 		if (!chatMessageDto.getName().trim().isEmpty()) {
 			message = chatMessageDto.getName().trim() + "さんの発言：\n" + message;
 		}
+		String replaceMessage = addMention(allianceMemberDtoList, message);
+
+		MessageCreateAction messageCreateAction = addAttachment(chatMessageDto, replaceMessage);
+		
+		StringSelectMenu.Builder menuBuilder;
+		StringSelectMenu selectMenu;
+		menuBuilder = StringSelectMenu.create("selectId1");
+		menuBuilder.setPlaceholder("セレクトしてください");
+		menuBuilder.addOption("表示1", "値1", "説明1");
+		menuBuilder.addOption("表示2", "値2", "説明2");
+		menuBuilder.addOption("表示3", "値3", "説明3");
+		menuBuilder.addOption("表示4", "値4", "説明4");
+		selectMenu = menuBuilder.build();
+		messageCreateAction.addActionRow(selectMenu);
+		
+		menuBuilder = StringSelectMenu.create("selectId2");
+		menuBuilder.setPlaceholder("セレクトしてください");
+		menuBuilder.addOption("表示1", "値1", "説明1");
+		menuBuilder.addOption("表示2", "値2", "説明2");
+		menuBuilder.addOption("表示3", "値3", "説明3");
+		menuBuilder.addOption("表示4", "値4", "説明4");
+		selectMenu = menuBuilder.build();
+		messageCreateAction.addActionRow(selectMenu);
+		
+		menuBuilder = StringSelectMenu.create("selectId3");
+		menuBuilder.setPlaceholder("セレクトしてください");
+		menuBuilder.addOption("表示1", "値1", "説明1");
+		menuBuilder.addOption("表示2", "値2", "説明2");
+		menuBuilder.addOption("表示3", "値3", "説明3");
+		menuBuilder.addOption("表示4", "値4", "説明4");
+		selectMenu = menuBuilder.build();
+		messageCreateAction.addActionRow(selectMenu);
+
+		Button myButton = Button.primary("button1", "OK");
+		messageCreateAction.addActionRow(myButton);
+		
+		messageCreateAction.queue();
+	}
+
+	private MessageCreateAction addAttachment(ChatMessageDto chatMessageDto, String replaceMessage) {
+		MessageCreateAction messageCreateAction = getChannel(chatMessageDto.getChannelId()).sendMessage(replaceMessage);
+		if (chatMessageDto.getQuoteDiscordId() != null && !chatMessageDto.getQuoteDiscordId().isEmpty())
+			messageCreateAction.setMessageReference(chatMessageDto.getQuoteDiscordId());
+		if (chatMessageDto.getChatAttachmentDtoList() != null) {
+			List<FileUpload> fileUploadList = new ArrayList<FileUpload>();
+			chatMessageDto.getChatAttachmentDtoList().forEach(chatAttachmentDto -> {
+				FileUpload fileUpload = FileUpload.fromData(chatAttachmentDto.getAttachmentFileInputStream(),
+						chatAttachmentDto.getAttachmentFileName());
+				fileUploadList.add(fileUpload);
+			});
+			messageCreateAction.setFiles(fileUploadList);
+		}
+		return messageCreateAction;
+	}
+
+	private String addMention(List<AllianceMemberDto> allianceMemberDtoList, String message) {
 		String replaceMessage = "";
 		for (AllianceMemberDto allianceMemberDto : allianceMemberDtoList) {
 			String mentionName = "@" + allianceMemberDto.getDiscordName();
@@ -103,20 +161,7 @@ public class DiscordBot {
 		}
 		if (replaceMessage.isEmpty())
 			replaceMessage = message;
-
-		MessageCreateAction messageCreateAction = getChannel(chatMessageDto.getChannelId()).sendMessage(replaceMessage);
-		if (chatMessageDto.getQuoteDiscordId() != null && !chatMessageDto.getQuoteDiscordId().isEmpty())
-			messageCreateAction.setMessageReference(chatMessageDto.getQuoteDiscordId());
-		if (chatMessageDto.getChatAttachmentDtoList() != null) {
-			List<FileUpload> fileUploadList = new ArrayList<FileUpload>();
-			chatMessageDto.getChatAttachmentDtoList().forEach(chatAttachmentDto -> {
-				FileUpload fileUpload = FileUpload.fromData(chatAttachmentDto.getAttachmentFileInputStream(),
-						chatAttachmentDto.getAttachmentFileName());
-				fileUploadList.add(fileUpload);
-			});
-			messageCreateAction.setFiles(fileUploadList);
-		}
-		messageCreateAction.queue();
+		return replaceMessage;
 	}
 
 }

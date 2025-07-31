@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const channelElement = document.getElementById("channelId") as HTMLInputElement;
-const channelId :string = channelElement.value;
+const channelId: string = channelElement.value;
 
 let ele = document.querySelector("meta[name='_csrf']") as HTMLElement;
 const csrfToken = ele.getAttribute("content") as string;
@@ -104,10 +104,10 @@ interface AllianceMemberForm {
 // --- 1. 取得するデータの型定義 ---
 // APIから返されるユーザーデータの構造を定義します
 interface Channel {
-	id:number;
-	channelId : string;
-	channelName : string;
-	chatMessageList : ChatMessageDto[];
+	id: number;
+	channelId: string;
+	channelName: string;
+	chatMessageList: ChatMessageDto[];
 }
 
 interface ChatMessageDto {
@@ -115,8 +115,8 @@ interface ChatMessageDto {
 	discordMessageId: string;
 	quoteId: string;
 	quoteDiscordId: string;
-	channelId : string;
-	channelName:string;
+	channelId: string;
+	channelName: string;
 	name: string;
 	message: string;
 	chatAttachmentDtoList: ChatAttachmentDto[];
@@ -124,8 +124,8 @@ interface ChatMessageDto {
 }
 
 interface ChatAttachmentDto {
-	attachmentUrl : string;
-	attachmentFileName : string;
+	attachmentUrl: string;
+	attachmentFileName: string;
 }
 
 interface MessageSize {
@@ -236,7 +236,7 @@ async function onPostMessage(): Promise<void> {
 	const multipartFileList: FileList = fileElement.files as FileList;
 	if (multipartFileList && multipartFileList.length !== 0) {
 		for (let i = 0; i < multipartFileList.length; i++) {
-		  formData.append('multipartFiles', multipartFileList[i]);
+			formData.append('multipartFiles', multipartFileList[i]);
 		}
 	}
 
@@ -249,7 +249,8 @@ async function onPostMessage(): Promise<void> {
 	await axios.post("/chat", formData, {
 		headers: {
 			'Content-Type': 'multipart/form-data'
-	 }}).then(function(response) {
+		}
+	}).then(function(response) {
 		window.setTimeout(resetAndDisplayChatMessage, 500);
 	});
 }
@@ -321,12 +322,12 @@ async function fetchAndDisplayMember(): Promise<void> {
 			.join("");
 		row.innerHTML = `
 	                    <td>${member.id}</td>
-						<td><select class="memberRoleSelect">${roleOptions}</select></td>
+						<td><select id="memberRoleSelect${member.id}">${roleOptions}</select></td>
 						<td>${member.discordMemberId}</td>
 						<td>${member.discordName}</td>
 						<td contenteditable="true">${member.ayarabuId}</td>
 						<td contenteditable="true">${member.ayarabuName}</td>
-						<td><select class="memberAllianceSelect">${allianceOptions}</select></td>
+						<td><select id="memberAllianceSelect${member.id}">${allianceOptions}</select></td>
 	                    <td>${member.statementCount}</td>
 						<td>${member.createDate}</td>
 	                `;
@@ -343,27 +344,15 @@ async function onSaveMember(): Promise<void> {
 	for (let i = 1; i < tableRows.length; i++) {
 		const row: HTMLTableRowElement = tableRows.item(i) as HTMLTableRowElement; // または listItems[i]
 		const rowId: string = row.dataset.id + "";
+		const id: number = parseInt(row.cells[0].textContent || "0", 10);
 
-		let selectElements : HTMLCollectionOf<HTMLSelectElement>;
-		let selectElement: HTMLSelectElement;
-		selectElements = row.cells[1].children as HTMLCollectionOf<HTMLSelectElement>;
-		let memberRoleStr : string = "MEMBER";
-		for (let i = 0; i < selectElements.length; i++) {
-			if (selectElements[i].tagName === 'SELECT') {
-				selectElement = selectElements[i];
-				memberRoleStr = selectElement.value;
-			}
-		}
-		selectElements = row.cells[1].children as HTMLCollectionOf<HTMLSelectElement>;
-		let allianceStr : string = "NONE";
-		for (let i = 0; i < selectElements.length; i++) {
-			if (selectElements[i].tagName === 'SELECT') {
-				selectElement = selectElements[i];
-				allianceStr = selectElement.value;
-			}
-		}
+		const memberRoleElement: HTMLSelectElement = document.getElementById(`memberRoleSelect${id}`) as HTMLSelectElement;
+		const memberRoleStr :string= memberRoleElement.value;
+		const allianceElement = document.getElementById(`memberAllianceSelect${id}`) as HTMLSelectElement;
+		const allianceStr = allianceElement.value;
+
 		const updateMember: Member = {
-			id: parseInt(row.cells[0].textContent || "0", 10),
+			id: id,
 			memberRole: memberRoleStr,
 			discordMemberId: row.cells[2].textContent || "",
 			discordName: row.cells[3].textContent || "",

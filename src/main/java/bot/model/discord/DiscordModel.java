@@ -28,6 +28,7 @@ import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.events.message.GenericMessageEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -294,6 +295,15 @@ public class DiscordModel extends ListenerAdapter {
 		}
 	}
 
+	@Override
+	public void onStringSelectInteraction(StringSelectInteractionEvent event) {
+		String customId = event.getComponentId();
+		if (customId.equals("selectId1")) {
+			String selectedValue = event.getValues().get(0);
+			event.reply(selectedValue+"が選択されました。").setEphemeral(true).queue();
+		}
+		event.deferReply(true).queue();
+	}
 	public void sendMessage(ChatMessageDto chatMessageDto) {
 		discordBot.sendMessage(chatMessageDto, memberModel.getAllianceMemberDtoList());
 	}
