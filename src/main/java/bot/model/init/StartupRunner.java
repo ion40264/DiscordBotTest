@@ -40,9 +40,9 @@ public class StartupRunner implements CommandLineRunner {
 			discordModel.adddIscordEventListener(chatService);
 			discordModel.adddIscordEventListener(memberService);
 			discordBot.init(discordModel);
-			discordModel.initDiscordMember();
+//			discordModel.initDiscordMember();
 			chatService.init();
-			discordModel.getHistory(100);
+//			discordModel.getHistory(100);
 
 			git.init();
 		} catch (Exception e) {

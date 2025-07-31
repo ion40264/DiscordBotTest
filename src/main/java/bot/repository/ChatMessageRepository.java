@@ -13,5 +13,5 @@ import bot.entity.ChatMessage;
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long>{
 	public ChatMessage findByDiscordMessageId(String discordMessageId);
 	public List<ChatMessage> findAllByOrderByIdDesc();
-	public Page<ChatMessage> findAllByOrderByIdDesc(Pageable pageable);
+	public Page<ChatMessage> findByChannelIdContaining(String channelId, Pageable pageable);
 }

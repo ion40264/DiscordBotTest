@@ -9,6 +9,8 @@ import org.modelmapper.TypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,25 +39,22 @@ public class ChatService implements DIscordEventListener {
 	private ChatAttachmentRepository chatAttachmentRepository;
 	@Autowired
 	private ChatMessageRepository chatMessageRepository;
-//	@Autowired
-//	private AppriCationProperties appriCationProperties;
+	// TODO DBメモリともに無制限はまずい
 	private List<ChatMessageDto> chatMessageDtoList = new ArrayList<>();
 
 	public void init() {
 		ModelMapper modelMapper = new ModelMapper();
 		List<Channel> channelList = channelRepository.findAll();
 		channelList.forEach(channel->{
-			if (channel.getChatMessageList() == null)
-				return;
-			chatMessageDtoList = modelMapper.map(channel.getChatMessageList(),
-					new TypeToken<List<ChatMessageDto>>() {
+			PageRequest pageable = PageRequest.of(0, 200);
+			Page<ChatMessage> page = chatMessageRepository.findByChannelIdContaining(channel.getChannelId(), pageable);
+			List<ChatMessageDto> chatMessageDtoList = modelMapper.map(page.getContent(),new TypeToken<List<ChatMessageDto>>() {
 					}.getType());
 			chatMessageDtoList.forEach(chatMessageDto->{
 				chatMessageDto.setChannelId(channel.getChannelId());
 				chatMessageDto.setChannelName(channel.getChannelName());
 			});
-			if (chatMessageDtoList == null)
-				chatMessageDtoList = new ArrayList<>();
+			this.chatMessageDtoList.addAll(chatMessageDtoList);
 		});
 	}
 
@@ -70,7 +69,7 @@ public class ChatService implements DIscordEventListener {
 		// DB保存
 		ModelMapper modelMapper = new ModelMapper();
 		ChatMessage chatMessage = modelMapper.map(chatMessageDto, ChatMessage.class);
-		chatMessage.setChannel(channel);
+		chatMessage.setChannelId(channel.getChannelId());
 		// TODO ChatMessageを保存 配下のChatAttachmentも同時に保存できるはず。うまくいかなかったので暫定
 		ChatMessage savedChatMessage = chatMessageRepository.save(chatMessage);
 		chatMessageDto.setId(savedChatMessage.getId());
@@ -104,17 +103,22 @@ public class ChatService implements DIscordEventListener {
 	public void onMessageUpdate(ChatMessageDto chatMessageDto) {
 	}
 
-	public List<ChatMessageDto> getChatMessageDtoList() {
-		return chatMessageDtoList;
+	public List<ChatMessageDto> getChatMessageDtoList(String channelId) {
+		List<ChatMessageDto> result = new ArrayList<ChatMessageDto>();
+		chatMessageDtoList.forEach(chatMessageDto->{
+			if (chatMessageDto.getChannelId().equals(channelId))
+				result.add(chatMessageDto);
+		});
+		return result;
 	}
 
 	@Transactional
 	public List<ChatMessageDto> getChatMessageDtoList(String channelId, Pageable pageable) {
 		Channel channel = channelRepository.findByChannelId(channelId);
 		List<ChatMessageDto> chatMessageDtoList = new ArrayList<>();
-		List<ChatMessage> chatMessageList = channel.getChatMessageList();
+		Page<ChatMessage> chatMessagePage = chatMessageRepository.findByChannelIdContaining(channelId, pageable);
 		ModelMapper modelMapper = new ModelMapper();
-		for (ChatMessage chatMessage : chatMessageList) {
+		for (ChatMessage chatMessage : chatMessagePage) {
 			List<ChatAttachmentDto> chatAttachmentDtoList = new ArrayList<ChatAttachmentDto>();
 			for (ChatAttachment chatAttachment : chatMessage.getChatAttachmentList()) {
 				ChatAttachmentDto chatAttachmentDto = new ChatAttachmentDto();

@@ -7,8 +7,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 
 import lombok.Data;
@@ -26,8 +24,6 @@ public class ChatMessage {
 	private String message;
 	@OneToMany(mappedBy = "chatMessage")
 	private List<ChatAttachment> chatAttachmentList = new ArrayList<>();
-	@ManyToOne
-	@JoinColumn(name = "channel_id")
-	private Channel channel;
+	private String channelId;
 	private String createDate;
 }

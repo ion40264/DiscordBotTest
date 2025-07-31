@@ -40,7 +40,6 @@ public class DiscordModel extends ListenerAdapter {
 	private static final Logger log = LoggerFactory.getLogger(DiscordModel.class);
 	@Autowired
 	private DiscordBot discordBot;
-	// TODO モデルがサービスを呼ぶのは気に食わないけど。。
 	@Autowired
 	private MemberModel memberModel;
 	@Autowired
@@ -140,7 +139,7 @@ public class DiscordModel extends ListenerAdapter {
 				chatMessage.setDiscordMessageId(message.getId());
 				chatMessage.setMessage(message.getContentDisplay().replace("\n", "<br>"));
 				chatMessage.setName(getName(message.getMember()));
-				chatMessage.setChannel(channel2);
+				chatMessage.setChannelId(channel2.getChannelId());
 				if (message.getReferencedMessage() != null)
 					chatMessage.setQuoteDiscordId(message.getReferencedMessage().getId());
 				chatMessage.setQuoteId(null);

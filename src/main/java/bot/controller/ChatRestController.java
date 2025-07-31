@@ -38,15 +38,10 @@ public class ChatRestController {
 		return chatService.getChatMessageDtoList(channelId, pageable);
 	}
 
-	@GetMapping
-	public List<ChatMessageDto> getAllChats() {
-		return chatService.getChatMessageDtoList();
-	}
-
 	@GetMapping("/size")
-	public MessageSizeDto getSize() {
+	public MessageSizeDto getSize(@RequestParam String channelId) {
 		MessageSizeDto messageSizeDto = new MessageSizeDto();
-		messageSizeDto.setSize(chatService.getChatMessageDtoList().size());
+		messageSizeDto.setSize(chatService.getChatMessageDtoList(channelId).size());
 		return messageSizeDto;
 	}
 
