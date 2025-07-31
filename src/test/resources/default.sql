@@ -10,4 +10,4 @@ INSERT INTO chat_message (discord_message_id,quote_discord_id,quote_id,name,mess
 	 ('10001',NULL,NULL,'サテライザー','サテライザーさんの発言：<br>テスト','2025/07/15 03:09:45','1392405356076073004'),
 	 ('10002',NULL,NULL,'サテライザー','こっちに書いたらどうなるかテスト','2025/07/15 06:32:35','1392405356076073004');
 INSERT INTO chat_attachment (attachment_url,chat_message_id,attachment_file_name) VALUES
-	 ('a.png',3,'name.png');
+	 ('a.png',2,'name.png');

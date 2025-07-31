@@ -84,14 +84,21 @@ class ChatServiceTest {
 		chatMessageDto.setQuoteDiscordId(null);
 		chatMessageDto.setQuoteId(null);
 		chatService.sendMessage(chatMessageDto);
-		Thread.sleep(1000);
-		ChatMessageDto result = chatService.getChatMessageDto(4L);
+		ChatMessageDto result = null;
+		int i = 0;
+		while(result == null) {
+			Thread.sleep(500);
+			result = chatService.getChatMessageDto(4L);
+			i++;
+			if (i>10)
+				break;
+		}
 		assertEquals("テスト名さんの発言：<br>テスト", result.getMessage());
 	}
 
 	@Test
 	void testOnMessageUpdate() {
-		chatService.onMessageDelete("1");
+		chatService.onMessageUpdate(null);
 	}
 
 	@Test
@@ -114,14 +121,16 @@ class ChatServiceTest {
 
 	@Test
 	void testOnMessageDelete() {
+		chatService.onMessageDelete(null);
 	}
 
 	@Test
 	void testOnGuildMemberJoin() {
+		chatService.onGuildMemberJoin(null);
 	}
 
 	@Test
 	void testOnGuildMemberRemove() {
+		chatService.onGuildMemberRemove(null);
 	}
-
 }

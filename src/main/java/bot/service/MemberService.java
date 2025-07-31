@@ -15,8 +15,6 @@ import bot.model.discord.DIscordEventListener;
 @Service
 public class MemberService implements DIscordEventListener {
 	@Autowired
-	private ChatService chatService;
-	@Autowired
 	private MemberModel memberModel;
 
 	public void addAllianceMemberDto(AllianceMemberDto AllianceMemberDto) {
