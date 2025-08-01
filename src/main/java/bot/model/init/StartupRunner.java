@@ -37,12 +37,12 @@ public class StartupRunner implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		try {
-			discordModel.adddIscordEventListener(chatService);
-			discordModel.adddIscordEventListener(memberService);
+			discordModel.addDiscordEventListener(chatService);
+			discordModel.addDiscordEventListener(memberService);
 			discordBot.init(discordModel);
-//			discordModel.initDiscordMember();
+			discordModel.initDiscordMember();
 			chatService.init();
-//			discordModel.getHistory(100);
+			discordModel.getHistory(100);
 
 			git.init();
 		} catch (Exception e) {
@@ -53,7 +53,8 @@ public class StartupRunner implements CommandLineRunner {
 	}
 	@PreDestroy
     public void cleanup() {
-		discordModel.removeIscordEventListener(chatService);
+		discordModel.removeDiscordEventListener(chatService);
+		discordModel.removeDiscordEventListener(memberService);
 		discordBot.shutDown();
 		log.info("終了完了");
     }

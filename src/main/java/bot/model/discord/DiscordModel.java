@@ -28,12 +28,17 @@ import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.events.message.GenericMessageEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.text.TextInput;
+import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
+import net.dv8tion.jda.api.interactions.modals.Modal;
 
 @Component
 public class DiscordModel extends ListenerAdapter {
@@ -90,7 +95,7 @@ public class DiscordModel extends ListenerAdapter {
 
 	public void getHistory(int limit) {
 		List<bot.entity.Channel> channelList = channelRepository.findAll();
-		channelList.forEach(channel->{
+		channelList.forEach(channel -> {
 			endFlag = true;
 			String messageId;
 			ChatMessageDto chatMessageDto = new ChatMessageDto();
@@ -135,7 +140,8 @@ public class DiscordModel extends ListenerAdapter {
 				ChatMessage chatMessage = new ChatMessage();
 				// TODO 日付の文字列型変換は共通に抜き出したい
 				chatMessage
-						.setCreateDate(message.getTimeCreated().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+						.setCreateDate(
+								message.getTimeCreated().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
 				chatMessage.setDiscordMessageId(message.getId());
 				chatMessage.setMessage(message.getContentDisplay().replace("\n", "<br>"));
 				chatMessage.setName(getName(message.getMember()));
@@ -157,25 +163,25 @@ public class DiscordModel extends ListenerAdapter {
 					chatMessage.setQuoteId(quoteChatMessage.getId().toString());
 				chatMessageRepository.save(chatMessage);
 			}
-			
+
 		});
 	}
 
-	public void adddIscordEventListener(DIscordEventListener dIscordEventListener) {
+	public void addDiscordEventListener(DIscordEventListener dIscordEventListener) {
 		dIscordEventListenerList.add(dIscordEventListener);
 	}
 
-	public void removeIscordEventListener(DIscordEventListener dIscordEventListener) {
+	public void removeDiscordEventListener(DIscordEventListener dIscordEventListener) {
 		dIscordEventListenerList.remove(dIscordEventListener);
 	}
 
 	@Override
 	public void onMessageReceived(MessageReceivedEvent event) {
 		try {
-			ChatMessageDto chatMessageDto = createChatMessageDto(event, event.getMember(), event.getMessage()); 
+			ChatMessageDto chatMessageDto = createChatMessageDto(event, event.getMember(), event.getMessage());
 			for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
 				dIscordEventListener
-						.onMessageReceived(chatMessageDto								);
+						.onMessageReceived(chatMessageDto);
 
 			}
 		} catch (Exception e) {
@@ -239,7 +245,7 @@ public class DiscordModel extends ListenerAdapter {
 	@Override
 	public void onMessageUpdate(MessageUpdateEvent event) {
 		try {
-			ChatMessageDto chatMessageDto = createChatMessageDto(event, event.getMember(), event.getMessage()); 
+			ChatMessageDto chatMessageDto = createChatMessageDto(event, event.getMember(), event.getMessage());
 			for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
 				dIscordEventListener.onMessageUpdate(chatMessageDto);
 
@@ -299,11 +305,47 @@ public class DiscordModel extends ListenerAdapter {
 		String customId = event.getComponentId();
 		if (customId.equals("selectId1")) {
 			String selectedValue = event.getValues().get(0);
-			event.reply(selectedValue+"が選択されました。").setEphemeral(true).queue();
+			event.reply(selectedValue + "が選択されました。").setEphemeral(true).queue();
 		}
 		event.deferReply(true).queue();
 	}
+
 	public void sendMessage(ChatMessageDto chatMessageDto) {
 		discordBot.sendMessage(chatMessageDto, memberModel.getAllianceMemberDtoList());
+	}
+
+	@Override
+	public void onButtonInteraction(ButtonInteractionEvent event) {
+		if (event.getComponentId().equals("open-form-button")) {
+			String message = event.getMessage().getContentRaw();
+			TextInput subject = TextInput.create("subject-field", "件名", TextInputStyle.SHORT)
+					.setPlaceholder("件名を入力してください")
+					.setMaxLength(100)
+					.setValue("hogehoge")
+					.setRequired(true)
+					.build();
+
+			TextInput body = TextInput.create("body-field", "本文", TextInputStyle.PARAGRAPH)
+					.setPlaceholder("詳細を入力してください")
+					.setMaxLength(100)
+					.setRequired(true)
+					.build();
+
+			Modal modal = Modal.create("my-form-modal", "フィードバックを送信")
+					.addComponents(ActionRow.of(subject), ActionRow.of(body))
+					.build();
+
+			event.replyModal(modal).queue(); // モーダルを表示
+		}
+	}
+
+	@Override
+	public void onModalInteraction(net.dv8tion.jda.api.events.interaction.ModalInteractionEvent event) {
+		if (event.getModalId().equals("my-form-modal")) {
+			String subject = event.getValue("subject-field").getAsString();
+			String body = event.getValue("body-field").getAsString();
+
+			event.reply("フィードバックを受け付けました！\n件名: " + subject + "\n本文: " + body).setEphemeral(true).queue();
+		}
 	}
 }

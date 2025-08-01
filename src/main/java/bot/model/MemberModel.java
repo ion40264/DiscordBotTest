@@ -48,9 +48,15 @@ public class MemberModel {
 	}
 	private AllianceMemberDto getDefault(String name, String discordId, boolean isBot) {
 		AllianceMemberDto allianceMemberDto = new AllianceMemberDto();
-		allianceMemberDto.setMemberRole(MemberRole.MEMBER);
-		allianceMemberDto.setAyarabuId("");
-		allianceMemberDto.setAyarabuName(name);
+		if (isBot) {
+			allianceMemberDto.setMemberRole(MemberRole.LEADER);
+			allianceMemberDto.setAyarabuId("ayarabu");
+			allianceMemberDto.setAyarabuName(name);
+		} else {
+			allianceMemberDto.setMemberRole(MemberRole.MEMBER);
+			allianceMemberDto.setAyarabuId("");
+			allianceMemberDto.setAyarabuName("");
+		}
 		allianceMemberDto.setBot(false);
 		allianceMemberDto.setCreateDate(DiscordBotTestApplication.sdf.format(new Date()));
 		allianceMemberDto.setStatementCount(0);

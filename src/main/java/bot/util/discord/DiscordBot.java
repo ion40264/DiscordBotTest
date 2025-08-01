@@ -20,7 +20,6 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 import net.dv8tion.jda.api.utils.FileUpload;
@@ -87,36 +86,7 @@ public class DiscordBot {
 
 		MessageCreateAction messageCreateAction = addAttachment(chatMessageDto, replaceMessage);
 		
-		StringSelectMenu.Builder menuBuilder;
-		StringSelectMenu selectMenu;
-		menuBuilder = StringSelectMenu.create("selectId1");
-		menuBuilder.setPlaceholder("セレクトしてください");
-		menuBuilder.addOption("表示1", "値1", "説明1");
-		menuBuilder.addOption("表示2", "値2", "説明2");
-		menuBuilder.addOption("表示3", "値3", "説明3");
-		menuBuilder.addOption("表示4", "値4", "説明4");
-		selectMenu = menuBuilder.build();
-		messageCreateAction.addActionRow(selectMenu);
-		
-		menuBuilder = StringSelectMenu.create("selectId2");
-		menuBuilder.setPlaceholder("セレクトしてください");
-		menuBuilder.addOption("表示1", "値1", "説明1");
-		menuBuilder.addOption("表示2", "値2", "説明2");
-		menuBuilder.addOption("表示3", "値3", "説明3");
-		menuBuilder.addOption("表示4", "値4", "説明4");
-		selectMenu = menuBuilder.build();
-		messageCreateAction.addActionRow(selectMenu);
-		
-		menuBuilder = StringSelectMenu.create("selectId3");
-		menuBuilder.setPlaceholder("セレクトしてください");
-		menuBuilder.addOption("表示1", "値1", "説明1");
-		menuBuilder.addOption("表示2", "値2", "説明2");
-		menuBuilder.addOption("表示3", "値3", "説明3");
-		menuBuilder.addOption("表示4", "値4", "説明4");
-		selectMenu = menuBuilder.build();
-		messageCreateAction.addActionRow(selectMenu);
-
-		Button myButton = Button.primary("button1", "OK");
+		Button myButton = Button.primary("open-form-button", "OK");
 		messageCreateAction.addActionRow(myButton);
 		
 		messageCreateAction.queue();
