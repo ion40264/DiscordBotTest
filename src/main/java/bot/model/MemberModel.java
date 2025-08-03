@@ -33,6 +33,26 @@ public class MemberModel {
 		log.info("メンバー削除:" + removeDto);
 	}
 
+	/**
+     * 指定されたユーザー情報（名前・ID・Botフラグ）に基づいて、
+     * ユーザー情報の初期化処理を行う。
+     * 
+     * DB上に該当ユーザー（discordId）が存在しない場合:
+     * デフォルトの {@link AllianceMemberDto} を新規作成し、DBおよびメモリ上のリストに追加する。
+     * このとき、isBotがtrueであれば管理者（LEADER）権限を自動付与する。
+     *
+     * DB上に既に存在する場合:
+     * DBの情報をDTOへ変換し、メモリ上のリストに反映（更新）する。
+     * この処理により、最新のDB情報が同期される。
+     *
+     * 本メソッドは、Bot起動時や初回参加時などに呼ばれ、
+     * ユーザーの存在確認および初期登録・更新を担う。
+     * 
+	 * @param name			Discord上の表示名
+	 * @param discordId	DiscordユーザーID
+	 * @param isBot		Botかどうかを示すフラグ（true の場合、リーダー権限を付与）
+	 */
+	
 	public void init(String name, String discordId, boolean isBot) {
 		AllianceMemberDto allianceMemberDto = new AllianceMemberDto();
 		AllianceMember allianceMember = allianceMemberRepository.findByDiscordMemberId(discordId);
