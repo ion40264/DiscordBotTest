@@ -36,6 +36,8 @@ window.addEventListener("DOMContentLoaded", (event: Event) => {
 		initChat();
 	} else if (path.includes("memberHtml")) {
 		initMember();
+	} else if (path.includes("fightingStrengthHtml")) {
+		initFightingStrength();
 	} else {
 		// その他のページ用の共通処理
 	}
@@ -59,12 +61,133 @@ function initMember() {
 	addButton.onclick = onAddMember;
 	const saveButton = document.getElementById("saveButton") as HTMLInputElement;
 	saveButton.onclick = onSaveMember;
+	const fightingStrengthDownloadButton = document.getElementById("fightingStrengthDownloadButton") as HTMLInputElement;
+	fightingStrengthDownloadButton.onclick = onFightingStrengthDownload;
+	const fightingStrengthUploadButton = document.getElementById("fightingStrengthUploadButton") as HTMLInputElement;
+	fightingStrengthUploadButton.onclick = onFightingStrengthUpload;
+	const fightingStrengthInitButton = document.getElementById("fightingStrengthInitButton") as HTMLInputElement;
+	fightingStrengthInitButton.onclick = onFightingStrengthInit;
+	
+	
 }
+function initFightingStrength() {
+	const fightingStrengthButton = document.getElementById("fightingStrengthButton") as HTMLInputElement;
+	fightingStrengthButton.onclick = onSaveFightingStrength;
+}
+
+async function onFightingStrengthInit(): Promise<void> {
+	await axios.get("/fightingStrength/init");
+}
+async function onFightingStrengthDownload(): Promise<void> {
+	const url = "/fightingStrength/excel"; // バックエンドのダウンロードURL
+
+	try {
+		const response = await axios.get(url, {
+			responseType: 'blob' // ★★★ これが最も重要！バイナリデータとして受け取る
+		});
+
+		// 1. レスポンスが Blob オブジェクトであることを確認
+		if (response.data instanceof Blob) {
+			const blob: Blob = response.data;
+
+			// 2. Content-Disposition ヘッダーからファイル名を取得する
+			//    バックエンドから送信される Content-Disposition ヘッダーを確認
+			//    例: attachment; filename="example.txt"
+			let filename: string = "fightingStrength.xslx"; // デフォルトはリクエストしたファイル名
+			const contentDisposition: string = response.headers['content-disposition'];
+			if (contentDisposition) {
+				const filenameMatch = contentDisposition.match(/filename\*?=["']?([^"';]+)["']?/i);
+				if (filenameMatch && filenameMatch.length > 1) {
+					// filename* の形式に対応するため decodeURIComponent を使用
+					// filename*="UTF-8''example.txt" のようになる場合がある
+					filename = decodeURIComponent(filenameMatch[1]);
+				}
+			}
+
+			// 3. Blob から一時的なURLを作成
+			const downloadUrl = window.URL.createObjectURL(blob);
+
+			// 4. ダウンロードをトリガーする (<a> タグを使用)
+			//    新しい <a> 要素を作成する方法が一般的で安全
+			const a = document.createElement('a') as HTMLAnchorElement;
+			a.href = downloadUrl;
+			a.download = filename; // ダウンロード時のファイル名を指定
+			document.body.appendChild(a); // DOMに追加 (一時的)
+			a.click(); // クリックイベントをトリガーしてダウンロードを開始
+			document.body.removeChild(a); // DOMから削除
+
+			// 5. 不要になった一時URLを解放
+			window.URL.revokeObjectURL(downloadUrl);
+
+			console.log(`ファイル ${filename} のダウンロードが開始されました。`);
+		} else {
+			console.error('期待されるBlobデータがレスポンスに含まれていません。');
+		}
+
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			console.error('ファイルのダウンロード中にエラーが発生しました:', error.message);
+			if (error.response) {
+				// エラーレスポンスの内容をログに出力（例: 404 Not Found など）
+				console.error('Status:', error.response.status);
+				// エラーボディがバイナリの場合もあるため、テキストとして読み込めるか試す
+				if (error.response.data instanceof Blob) {
+					const reader = new FileReader();
+					reader.onload = () => {
+						console.error('Error Body:', reader.result);
+					};
+					reader.readAsText(error.response.data);
+				} else {
+					console.error('Error Body:', error.response.data);
+				}
+			}
+		} else {
+			console.error('予期せぬエラー:', error);
+		}
+	}
+}
+
+async function onFightingStrengthUpload(): Promise<void> {
+	const formData: FormData = new FormData();
+
+	const fileElement = document.getElementById(
+		"fightingStrengthFile"
+	) as HTMLInputElement;
+	const multipartFileList: FileList = fileElement.files as FileList;
+	if (multipartFileList && multipartFileList.length !== 0) {
+		for (let i = 0; i < multipartFileList.length; i++) {
+			formData.append('multipartFiles', multipartFileList[i]);
+		}
+	}
+
+	// Axiosでリクエスト送信
+	await axios.post("/fightingStrength/excel", formData, {
+		headers: {
+			'Content-Type': 'multipart/form-data'
+		}
+	}).then(function(response) {
+	});
+}
+
 async function onDeleteMember(): Promise<void> {
 	const deleteInput = document.getElementById("deleteInput") as HTMLInputElement;
 	const memberIdToDelete: number = parseInt(deleteInput.value, 10);
 	await axios.delete(`/member/` + memberIdToDelete);
 	fetchAndDisplayMember();
+}
+async function onSaveFightingStrength(): Promise<void> {
+	const textElement = document.getElementById(
+		"fightingStrengthMessage"
+	) as HTMLTextAreaElement;
+	const text: string = textElement.value as string;
+	const formData: FormData = new FormData();
+	formData.append("text", text);
+
+	// Axiosでリクエスト送信
+	await axios.put("/fightingStrength", formData, {
+	}).then(function(response) {
+	});
+
 }
 async function onAddMember(): Promise<void> {
 	const ayarabuInput = document.getElementById("ayarabuInput") as HTMLInputElement; // 変数名をdeleteInputからayarabuInputに修正
@@ -347,7 +470,7 @@ async function onSaveMember(): Promise<void> {
 		const id: number = parseInt(row.cells[0].textContent || "0", 10);
 
 		const memberRoleElement: HTMLSelectElement = document.getElementById(`memberRoleSelect${id}`) as HTMLSelectElement;
-		const memberRoleStr :string= memberRoleElement.value;
+		const memberRoleStr: string = memberRoleElement.value;
 		const allianceElement = document.getElementById(`memberAllianceSelect${id}`) as HTMLSelectElement;
 		const allianceStr = allianceElement.value;
 

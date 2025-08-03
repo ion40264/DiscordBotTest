@@ -1,10 +1,12 @@
 
 /* Drop Tables */
 
+DROP TABLE [fighting_strength];
 DROP TABLE [alliance_member];
 DROP TABLE [chat_attachment];
 DROP TABLE [chat_message];
 DROP TABLE [channel];
+DROP TABLE [level_master];
 
 
 
@@ -59,6 +61,26 @@ CREATE TABLE [chat_attachment]
 	[attachment_file_name] text,
 	FOREIGN KEY ([chat_message_id])
 	REFERENCES [chat_message] ([id])
+);
+
+
+CREATE TABLE [fighting_strength]
+(
+	[id] integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+	[color] text,
+	[level] integer,
+	[point] integer,
+	[member_id] integer NOT NULL,
+	[update_date] text,
+	FOREIGN KEY ([member_id])
+	REFERENCES [alliance_member] ([id])
+);
+
+
+CREATE TABLE [level_master]
+(
+	[id] integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+	[level] integer
 );
 
 

@@ -5,8 +5,8 @@
 	<meta charset="UTF-8">
 	<title>メンバー一覧</title>
 	<script type="module" src="./js/main.js"></script>
-	<meta name="_csrf" th:content="${_csrf.token}"/>
-	<meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+	<meta name="_csrf" th:content="${_csrf.token}" />
+	<meta name="_csrf_header" th:content="${_csrf.headerName}" />
 </head>
 
 <body>
@@ -37,8 +37,16 @@
 	<form>
 		あやらぶ名:<input type="text" id="ayarabuInput"><input type="button" id="addButton" value="メンバー登録">
 	</form>
+	<br>
+	<input type="button" id="fightingStrengthDownloadButton" value="戦力エクセルファイルダウンロード">"
+	<br>
+	<form>
+		エクセルファイル：<input type="file" id="fightingStrengthFile"><br>
+		<input type="button" id="fightingStrengthUploadButton" value="アップロード"><br>
+	</form>
+	<br>
+	<input type="button" id="fightingStrengthInitButton" value="戦力初期化">"
+<br>
 </body>
 
 </html>
-
-
