@@ -38,6 +38,7 @@ import jp.highwide.common.excel.ExcelEntity.Align;
  */
 public class ExcelUtil {
 	private static final Logger log = LoggerFactory.getLogger(ExcelUtil.class);
+
 	/**
 	 * Excelを読み込む。
 	 *
@@ -107,7 +108,7 @@ public class ExcelUtil {
 							if (!isCellBlank(cell)) {
 								switch (cell.getCellType()) {
 								case STRING:
-									field.set(obj, Boolean.valueOf(cell.getRichStringCellValue().toString()));
+									field.set(obj, cell.getRichStringCellValue().toString());
 									break;
 								case NUMERIC:
 									if (DateUtil.isCellDateFormatted(cell)) {
@@ -116,9 +117,10 @@ public class ExcelUtil {
 									} else {
 										str = (long) cell.getNumericCellValue() + "";
 									}
+									field.set(obj, str);
 									break;
 								case FORMULA:
-									field.set(obj, Boolean.valueOf(cell.getRichStringCellValue().toString()));
+									field.set(obj, cell.getCellFormula());
 									break;
 								default:
 									break;
@@ -126,19 +128,19 @@ public class ExcelUtil {
 
 							} else {
 								str = null;
+								field.set(obj, str);
 							}
-							field.set(obj, str);
 						} else if (field.getGenericType().equals(Integer.class)
 								|| field.getGenericType().equals(int.class)) {
 							if (!isCellBlank(cell)) {
-								field.set(obj, (int) cell.getNumericCellValue() + "");
+								field.set(obj, (int) cell.getNumericCellValue());
 							} else {
 								field.set(obj, null);
 							}
 						} else if (field.getGenericType().equals(Long.class)
 								|| field.getGenericType().equals(long.class)) {
 							if (!isCellBlank(cell)) {
-								field.set(obj, (long)cell.getNumericCellValue());
+								field.set(obj, (long) cell.getNumericCellValue());
 							} else {
 								field.set(obj, null);
 							}

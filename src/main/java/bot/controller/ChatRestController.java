@@ -64,7 +64,7 @@ public class ChatRestController {
 		chatMessageDto.setName(messageForm.getName());
 		if (messageForm.getReferencedMessageId() != null && !messageForm.getReferencedMessageId().isEmpty()) {
 			ChatMessageDto refChatMessageDto = chatService
-					.getChatMessageDto(Long.parseLong(messageForm.getReferencedMessageId().trim()));
+					.getChatMessageDto(Integer.parseInt(messageForm.getReferencedMessageId().trim()));
 			chatMessageDto.setQuoteDiscordId(refChatMessageDto.getDiscordMessageId());
 			chatMessageDto.setQuoteId(refChatMessageDto.getId().toString());
 		}

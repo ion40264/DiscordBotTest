@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 public class ChatMessageDto {
-	private Long id;
+	private Integer id;
 	private String discordMessageId;
 	private String quoteId;
 	private String quoteDiscordId;

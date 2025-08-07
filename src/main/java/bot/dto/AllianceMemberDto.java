@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class AllianceMemberDto {
-	private Long id;
+	private Integer id;
 	private MemberRole memberRole = MemberRole.MEMBER;
 	private String discordMemberId;
 	private String discordName;

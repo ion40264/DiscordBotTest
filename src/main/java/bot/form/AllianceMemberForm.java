@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class AllianceMemberForm {
-	private Long id;
+	private Integer id;
 	private String memberRole;
 	private String discordMemberId;
 	private String discordName;

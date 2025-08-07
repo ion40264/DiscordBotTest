@@ -12,6 +12,6 @@ import lombok.Data;
 public class LevelMaster {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-	private Integer level;
+	private Integer id;
+	private Integer enemyLevel;
 }

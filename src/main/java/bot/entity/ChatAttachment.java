@@ -14,7 +14,7 @@ import lombok.Data;
 public class ChatAttachment {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	private Integer id;
 	@ManyToOne
 	@JoinColumn(name = "chat_message_id")
 	private ChatMessage chatMessage;

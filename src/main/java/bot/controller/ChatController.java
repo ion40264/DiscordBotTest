@@ -6,16 +6,16 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import bot.entity.Channel;
-import bot.repository.ChannelRepository;
+import bot.entity.ChannelMaster;
+import bot.repository.ChannelMasterRepository;
 
 @Controller
 public class ChatController {
 	@Autowired
-	private ChannelRepository channelRepository;
+	private ChannelMasterRepository channelRepository;
 	@GetMapping("/chatHtml/{channelId}")
     public String index(@PathVariable String channelId, Model model) {
-		Channel channel = channelRepository.findByChannelId(channelId);
+		ChannelMaster channel = channelRepository.findByChannelId(channelId);
 		model.addAttribute("channelName", channel.getChannelName());
 		model.addAttribute("channelId", channelId);
         return "chat";

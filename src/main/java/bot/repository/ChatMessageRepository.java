@@ -10,8 +10,8 @@ import org.springframework.stereotype.Repository;
 import bot.entity.ChatMessage;
 
 @Repository
-public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long>{
+public interface ChatMessageRepository extends JpaRepository<ChatMessage, Integer>{
 	public ChatMessage findByDiscordMessageId(String discordMessageId);
 	public List<ChatMessage> findAllByOrderByIdDesc();
-	public Page<ChatMessage> findByChannelIdContaining(String channelId, Pageable pageable);
+	public Page<ChatMessage> findByChannelMasterId(Integer channelId, Pageable pageable);
 }

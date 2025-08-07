@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 import bot.entity.ChatAttachment;
 
 @Repository
-public interface ChatAttachmentRepository extends JpaRepository<ChatAttachment, Long>{
+public interface ChatAttachmentRepository extends JpaRepository<ChatAttachment, Integer>{
 }

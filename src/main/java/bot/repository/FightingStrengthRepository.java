@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import bot.entity.FightingStrength;
 
 @Repository
-public interface FightingStrengthRepository extends JpaRepository<FightingStrength, Long>{
+public interface FightingStrengthRepository extends JpaRepository<FightingStrength, Integer>{
 
 }

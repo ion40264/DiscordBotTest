@@ -79,44 +79,36 @@ async function onFightingStrengthInit(): Promise<void> {
 	await axios.get("/fightingStrength/init");
 }
 async function onFightingStrengthDownload(): Promise<void> {
-	const url = "/fightingStrength/excel"; // バックエンドのダウンロードURL
+	const url = "/fightingStrength/excel";
 
 	try {
 		const response = await axios.get(url, {
-			responseType: 'blob' // ★★★ これが最も重要！バイナリデータとして受け取る
+			responseType: 'blob'
 		});
 
-		// 1. レスポンスが Blob オブジェクトであることを確認
+		
 		if (response.data instanceof Blob) {
 			const blob: Blob = response.data;
 
-			// 2. Content-Disposition ヘッダーからファイル名を取得する
-			//    バックエンドから送信される Content-Disposition ヘッダーを確認
-			//    例: attachment; filename="example.txt"
-			let filename: string = "fightingStrength.xslx"; // デフォルトはリクエストしたファイル名
+			
+			let filename: string = "fightingStrength.xslx";
 			const contentDisposition: string = response.headers['content-disposition'];
 			if (contentDisposition) {
 				const filenameMatch = contentDisposition.match(/filename\*?=["']?([^"';]+)["']?/i);
 				if (filenameMatch && filenameMatch.length > 1) {
-					// filename* の形式に対応するため decodeURIComponent を使用
-					// filename*="UTF-8''example.txt" のようになる場合がある
 					filename = decodeURIComponent(filenameMatch[1]);
 				}
 			}
 
-			// 3. Blob から一時的なURLを作成
 			const downloadUrl = window.URL.createObjectURL(blob);
 
-			// 4. ダウンロードをトリガーする (<a> タグを使用)
-			//    新しい <a> 要素を作成する方法が一般的で安全
 			const a = document.createElement('a') as HTMLAnchorElement;
 			a.href = downloadUrl;
-			a.download = filename; // ダウンロード時のファイル名を指定
-			document.body.appendChild(a); // DOMに追加 (一時的)
-			a.click(); // クリックイベントをトリガーしてダウンロードを開始
-			document.body.removeChild(a); // DOMから削除
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
 
-			// 5. 不要になった一時URLを解放
 			window.URL.revokeObjectURL(downloadUrl);
 
 			console.log(`ファイル ${filename} のダウンロードが開始されました。`);
@@ -128,9 +120,7 @@ async function onFightingStrengthDownload(): Promise<void> {
 		if (axios.isAxiosError(error)) {
 			console.error('ファイルのダウンロード中にエラーが発生しました:', error.message);
 			if (error.response) {
-				// エラーレスポンスの内容をログに出力（例: 404 Not Found など）
 				console.error('Status:', error.response.status);
-				// エラーボディがバイナリの場合もあるため、テキストとして読み込めるか試す
 				if (error.response.data instanceof Blob) {
 					const reader = new FileReader();
 					reader.onload = () => {
@@ -159,8 +149,6 @@ async function onFightingStrengthUpload(): Promise<void> {
 			formData.append('multipartFiles', multipartFileList[i]);
 		}
 	}
-
-	// Axiosでリクエスト送信
 	await axios.post("/fightingStrength/excel", formData, {
 		headers: {
 			'Content-Type': 'multipart/form-data'

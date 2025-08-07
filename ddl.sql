@@ -68,7 +68,7 @@ CREATE TABLE [fighting_strength]
 (
 	[id] integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 	[color] text,
-	[level] integer,
+	[enemy_level] integer,
 	[point] integer,
 	[member_id] integer NOT NULL,
 	[update_date] text,
@@ -80,7 +80,7 @@ CREATE TABLE [fighting_strength]
 CREATE TABLE [level_master]
 (
 	[id] integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-	[level] integer
+	[enemy_level] integer
 );
 
 

@@ -9,10 +9,10 @@ import lombok.Data;
 
 @Data
 @Entity
-public class Channel {
+public class ChannelMaster {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	private Integer id;
 	private String channelId;
 	private String channelName;
 }

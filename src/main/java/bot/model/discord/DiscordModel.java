@@ -2,7 +2,6 @@ package bot.model.discord;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,13 +13,11 @@ import org.springframework.stereotype.Component;
 import bot.dto.AllianceMemberDto;
 import bot.dto.ChatAttachmentDto;
 import bot.dto.ChatMessageDto;
-import bot.entity.Channel;
-import bot.entity.ChatAttachment;
 import bot.entity.ChatMessage;
-import bot.model.MemberModel;
-import bot.repository.ChannelRepository;
-import bot.repository.ChatAttachmentRepository;
+import bot.repository.ChannelMasterRepository;
 import bot.repository.ChatMessageRepository;
+import bot.service.ChatService;
+import bot.service.MemberService;
 import bot.util.discord.DiscordBot;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
@@ -46,57 +43,41 @@ public class DiscordModel extends ListenerAdapter {
 	@Autowired
 	private DiscordBot discordBot;
 	@Autowired
-	private MemberModel memberModel;
+	private MemberService memberService;
+	@Autowired
+	private ChatService chatService;
 	@Autowired
 	private ChatMessageRepository chatMessageRepository;
 	@Autowired
-	private ChatAttachmentRepository chatAttachmentRepository;
-	@Autowired
-	private ChannelRepository channelRepository;
+	private ChannelMasterRepository channelRepository;
 	private List<DIscordEventListener> dIscordEventListenerList = new ArrayList<DIscordEventListener>();
 
-	private boolean endFlag = false;
 	private List<Message> messageList;
 
 	public void initDiscordMember() {
-		endFlag = true;
 		discordBot.getGuild().loadMembers().onSuccess(members -> {
 			if (members.isEmpty()) {
 				log.error("このギルドにはメンバーがいません（または取得できませんでした）。");
-				endFlag = false;
 				return;
 			}
 
 			try {
 				for (Member member : members) {
-					memberModel.init(getName(member), member.getId(), member.getUser().isBot());
+					memberService.init(getName(member), member.getId(), member.getUser().isBot());
 				}
 			} catch (Exception e) {
 				log.error("メンバー取得でエラー", e);
 				throw e;
 			}
-			endFlag = false;
-
 		}).onError(throwable -> {
 			log.error("メンバー取得でエラー", throwable);
-			endFlag = false;
 		});
-		// TODO すっげー嫌な書き方
-		while (endFlag) {
-			try {
-				Thread.sleep(100L);
-			} catch (InterruptedException e) {
-				endFlag = false;
-			}
-		}
-		endFlag = false;
 		log.info("Discordメンバー取得完了");
 	}
 
 	public void getHistory(int limit) {
-		List<bot.entity.Channel> channelList = channelRepository.findAll();
+		List<bot.entity.ChannelMaster> channelList = channelRepository.findAll();
 		channelList.forEach(channel -> {
-			endFlag = true;
 			String messageId;
 			ChatMessageDto chatMessageDto = new ChatMessageDto();
 			chatMessageDto.setChannelId(channel.getChannelId());
@@ -109,7 +90,7 @@ public class DiscordModel extends ListenerAdapter {
 				Thread.sleep(1000L);
 			} catch (InterruptedException e) {
 			}
-			Optional<ChatMessage> optional = chatMessageRepository.findById(1L);
+			Optional<ChatMessage> optional = chatMessageRepository.findById(1);
 			if (!optional.isEmpty()) {
 				messageId = optional.get().getDiscordMessageId();
 				discordBot.getChannel(channel.getChannelId()).getHistoryBefore(messageId, limit).queue(
@@ -117,53 +98,10 @@ public class DiscordModel extends ListenerAdapter {
 							messageList = history.getRetrievedHistory();
 							log.info("基準メッセージ (" + messageId + ") より前のメッセージ " + messageList.size()
 									+ " 件を取得しました。");
-							endFlag = false;
+							chatService.saveChatHistory(messageList, channel);
 
 						});
-				// TODO すっげーいやな書き方。。
-				while (endFlag) {
-					try {
-						Thread.sleep(100);
-					} catch (InterruptedException e) {
-					}
-				}
 			}
-
-			// 取得したメッセージのリストは、古い順に並んでいるのでソート
-			List<Message> sortMessageList = new ArrayList<>();
-			sortMessageList.addAll(messageList);
-			sortMessageList.sort(Comparator.comparing(Message::getIdLong));
-			for (Message message : sortMessageList) {
-				if (chatMessageRepository.findByDiscordMessageId(message.getId()) != null)
-					continue;
-				Channel channel2 = channelRepository.findByChannelId(message.getChannelId());
-				ChatMessage chatMessage = new ChatMessage();
-				// TODO 日付の文字列型変換は共通に抜き出したい
-				chatMessage
-						.setCreateDate(
-								message.getTimeCreated().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
-				chatMessage.setDiscordMessageId(message.getId());
-				chatMessage.setMessage(message.getContentDisplay().replace("\n", "<br>"));
-				chatMessage.setName(getName(message.getMember()));
-				chatMessage.setChannelId(channel2.getChannelId());
-				if (message.getReferencedMessage() != null)
-					chatMessage.setQuoteDiscordId(message.getReferencedMessage().getId());
-				chatMessage.setQuoteId(null);
-				chatMessageRepository.save(chatMessage);
-				message.getAttachments().forEach((attachment) -> {
-					ChatAttachment chatAttachment = new ChatAttachment();
-					chatAttachment.setAttachmentUrl(attachment.getUrl());
-					chatAttachment.setChatMessage(chatMessage);
-					chatAttachment.setAttachmentFileName(attachment.getFileName());
-					chatAttachmentRepository.save(chatAttachment);
-				});
-				ChatMessage quoteChatMessage = chatMessageRepository
-						.findByDiscordMessageId(chatMessage.getQuoteDiscordId());
-				if (quoteChatMessage != null)
-					chatMessage.setQuoteId(quoteChatMessage.getId().toString());
-				chatMessageRepository.save(chatMessage);
-			}
-
 		});
 	}
 
@@ -203,7 +141,7 @@ public class DiscordModel extends ListenerAdapter {
 				attachmentDtoList.add(chatAttachmentDto);
 			});
 		}
-		AllianceMemberDto allianceMemberDto = memberModel.getAllianceMemberDto(member.getId());
+		AllianceMemberDto allianceMemberDto = memberService.getAllianceMemberDto(member.getId());
 		if (allianceMemberDto == null) {
 			allianceMemberDto = new AllianceMemberDto();
 			log.warn("メンバーにいない人からメッセージ message=" + discoMessage);
@@ -273,7 +211,7 @@ public class DiscordModel extends ListenerAdapter {
 	public void onGuildMemberJoin(GuildMemberJoinEvent event) {
 		try {
 			Member member = event.getMember();
-			AllianceMemberDto allianceMemberDto = memberModel.getAllianceMemberDto(member.getId());
+			AllianceMemberDto allianceMemberDto = memberService.getAllianceMemberDto(member.getId());
 			for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
 				dIscordEventListener
 						.onGuildMemberJoin(allianceMemberDto);
@@ -288,7 +226,7 @@ public class DiscordModel extends ListenerAdapter {
 	public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
 		try {
 			Member member = event.getMember();
-			AllianceMemberDto allianceMemberDto = memberModel.getAllianceMemberDto(member.getId());
+			AllianceMemberDto allianceMemberDto = memberService.getAllianceMemberDto(member.getId());
 			allianceMemberDto.setBot(false);
 			for (DIscordEventListener dIscordEventListener : dIscordEventListenerList) {
 				dIscordEventListener
@@ -311,7 +249,7 @@ public class DiscordModel extends ListenerAdapter {
 	}
 
 	public void sendMessage(ChatMessageDto chatMessageDto) {
-		discordBot.sendMessage(chatMessageDto, memberModel.getAllianceMemberDtoList());
+		discordBot.sendMessage(chatMessageDto, memberService.getAllianceMemberDtoList());
 	}
 
 	@Override
