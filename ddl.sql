@@ -15,7 +15,7 @@ DROP TABLE [level_master];
 
 CREATE TABLE [alliance_member]
 (
-	[id] integer NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+	[id] integer NOT NULL UNIQUE,
 	[discord_member_id] text,
 	[discord_name] text,
 	[ayarabu_id] text,
@@ -26,15 +26,17 @@ CREATE TABLE [alliance_member]
 	-- リーダーとか
 	[member_role] text,
 	-- 1がボット、0が普通
-	[bot] integer
+	[bot] integer,
+	PRIMARY KEY ([id])
 );
 
 
 CREATE TABLE [channel]
 (
-	[id] integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+	[id] integer NOT NULL,
 	[channel_name] text,
-	[channel_id] text
+	[channel_id] text,
+	PRIMARY KEY ([id])
 );
 
 
@@ -66,12 +68,13 @@ CREATE TABLE [chat_attachment]
 
 CREATE TABLE [fighting_strength]
 (
-	[id] integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+	[id] integer NOT NULL,
 	[color] text,
 	[enemy_level] integer,
 	[point] integer,
 	[member_id] integer NOT NULL,
 	[update_date] text,
+	PRIMARY KEY ([id]),
 	FOREIGN KEY ([member_id])
 	REFERENCES [alliance_member] ([id])
 );
@@ -79,8 +82,9 @@ CREATE TABLE [fighting_strength]
 
 CREATE TABLE [level_master]
 (
-	[id] integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-	[enemy_level] integer
+	[id] integer NOT NULL,
+	[enemy_level] integer,
+	PRIMARY KEY ([id])
 );
 
 
