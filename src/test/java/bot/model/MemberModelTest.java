@@ -5,17 +5,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.test.context.jdbc.Sql;
 
 import bot.dto.AllianceMemberDto;
-import bot.repository.AllianceMemberRepository;
+import bot.dto.MemberAlliance;
+import bot.dto.MemberRole;
 
+@Sql(scripts = "classpath:ddl.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+@Sql(scripts = "classpath:default.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Component 
 class MemberModelTest {
 	
 	@Autowired
     private MemberModel memberModel;
-	
-    private AllianceMemberRepository repository;
 	
     
 	
@@ -37,6 +39,22 @@ class MemberModelTest {
         String discordId = "fine4139";
         memberModel.init(name, discordId, false);
 
+
+        AllianceMemberDto allianceDto = memberModel.getAllianceMemberDto(discordId);
+        assertNotNull(allianceDto);
+        assertEquals(name, allianceDto.getDiscordName());
+        assertEquals(discordId, allianceDto.getDiscordMemberId());
+        assertEquals(MemberRole.MEMBER, allianceDto.getMemberRole());
+        assertEquals(MemberAlliance.HOKKORI, allianceDto.getAlliance());
+	}
+
+	@Test
+	void testInit_withNoExistingMember() {
+        String name = "Fine";
+        String discordId = "fine4139";
+        memberModel.init(name, discordId, false);
+
+
         AllianceMemberDto allianceDto = memberModel.getAllianceMemberDto(discordId);
         assertNotNull(allianceDto);
         assertEquals(name, allianceDto.getDiscordName());
@@ -44,7 +62,7 @@ class MemberModelTest {
         assertEquals("メンバー", allianceDto.getMemberRole());
         assertEquals("ほっこり茶屋", allianceDto.getAlliance());
 	}
-
+	
 	@Test
 	void testGetAllianceMemberDtoList() {
 		fail("まだ実装されていません");
