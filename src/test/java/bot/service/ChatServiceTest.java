@@ -88,7 +88,7 @@ class ChatServiceTest {
 		int i = 0;
 		while(result == null) {
 			Thread.sleep(500);
-			result = chatService.getChatMessageDto(4L);
+			result = chatService.getChatMessageDto(4);
 			i++;
 			if (i>10)
 				break;

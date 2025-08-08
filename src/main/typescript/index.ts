@@ -36,6 +36,8 @@ window.addEventListener("DOMContentLoaded", (event: Event) => {
 		initChat();
 	} else if (path.includes("memberHtml")) {
 		initMember();
+	} else if (path.includes("fightingStrengthHtml")) {
+		initFightingStrength();
 	} else {
 		// その他のページ用の共通処理
 	}
@@ -59,27 +61,138 @@ function initMember() {
 	addButton.onclick = onAddMember;
 	const saveButton = document.getElementById("saveButton") as HTMLInputElement;
 	saveButton.onclick = onSaveMember;
+	const fightingStrengthDownloadButton = document.getElementById("fightingStrengthDownloadButton") as HTMLInputElement;
+	fightingStrengthDownloadButton.onclick = onFightingStrengthDownload;
+	const fightingStrengthUploadButton = document.getElementById("fightingStrengthUploadButton") as HTMLInputElement;
+	fightingStrengthUploadButton.onclick = onFightingStrengthUpload;
+	const fightingStrengthInitButton = document.getElementById("fightingStrengthInitButton") as HTMLInputElement;
+	fightingStrengthInitButton.onclick = onFightingStrengthInit;
+	
+	
 }
+function initFightingStrength() {
+	const fightingStrengthButton = document.getElementById("fightingStrengthButton") as HTMLInputElement;
+	fightingStrengthButton.onclick = onSaveFightingStrength;
+}
+
+async function onFightingStrengthInit(): Promise<void> {
+	await axios.get("/fightingStrength/init");
+}
+async function onFightingStrengthDownload(): Promise<void> {
+	const url = "/fightingStrength/excel";
+
+	try {
+		const response = await axios.get(url, {
+			responseType: 'blob'
+		});
+
+		
+		if (response.data instanceof Blob) {
+			const blob: Blob = response.data;
+
+			
+			let filename: string = "fightingStrength.xslx";
+			const contentDisposition: string = response.headers['content-disposition'];
+			if (contentDisposition) {
+				const filenameMatch = contentDisposition.match(/filename\*?=["']?([^"';]+)["']?/i);
+				if (filenameMatch && filenameMatch.length > 1) {
+					filename = decodeURIComponent(filenameMatch[1]);
+				}
+			}
+
+			const downloadUrl = window.URL.createObjectURL(blob);
+
+			const a = document.createElement('a') as HTMLAnchorElement;
+			a.href = downloadUrl;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+
+			window.URL.revokeObjectURL(downloadUrl);
+
+			console.log(`ファイル ${filename} のダウンロードが開始されました。`);
+		} else {
+			console.error('期待されるBlobデータがレスポンスに含まれていません。');
+		}
+
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			console.error('ファイルのダウンロード中にエラーが発生しました:', error.message);
+			if (error.response) {
+				console.error('Status:', error.response.status);
+				if (error.response.data instanceof Blob) {
+					const reader = new FileReader();
+					reader.onload = () => {
+						console.error('Error Body:', reader.result);
+					};
+					reader.readAsText(error.response.data);
+				} else {
+					console.error('Error Body:', error.response.data);
+				}
+			}
+		} else {
+			console.error('予期せぬエラー:', error);
+		}
+	}
+}
+
+async function onFightingStrengthUpload(): Promise<void> {
+	const formData: FormData = new FormData();
+
+	const fileElement = document.getElementById(
+		"fightingStrengthFile"
+	) as HTMLInputElement;
+	const multipartFileList: FileList = fileElement.files as FileList;
+	if (multipartFileList && multipartFileList.length !== 0) {
+		for (let i = 0; i < multipartFileList.length; i++) {
+			formData.append('multipartFiles', multipartFileList[i]);
+		}
+	}
+	await axios.post("/fightingStrength/excel", formData, {
+		headers: {
+			'Content-Type': 'multipart/form-data'
+		}
+	}).then(function(response) {
+	});
+}
+
 async function onDeleteMember(): Promise<void> {
 	const deleteInput = document.getElementById("deleteInput") as HTMLInputElement;
 	const memberIdToDelete: number = parseInt(deleteInput.value, 10);
 	await axios.delete(`/member/` + memberIdToDelete);
 	fetchAndDisplayMember();
 }
+async function onSaveFightingStrength(): Promise<void> {
+	const textElement = document.getElementById(
+		"fightingStrengthMessage"
+	) as HTMLTextAreaElement;
+	const text: string = textElement.value as string;
+	const formData: FormData = new FormData();
+	formData.append("text", text);
+
+	// Axiosでリクエスト送信
+	await axios.put("/fightingStrength", formData, {
+	}).then(function(response) {
+	});
+
+}
 async function onAddMember(): Promise<void> {
-	const ayarabuInput = document.getElementById("ayarabuInput") as HTMLInputElement; // 変数名をdeleteInputからayarabuInputに修正
-	if (!ayarabuInput) { // 要素が存在しない場合のエラーを避ける
-		console.error("ayarabuInput element not found.");
+	const ayarabuNameInput = document.getElementById("ayarabuNameInput") as HTMLInputElement; // 変数名をdeleteInputからayarabuInputに修正
+	if (!ayarabuNameInput) { // 要素が存在しない場合のエラーを避ける
+		console.error("ayarabuNameInput element not found.");
 		return;
 	}
+	const ayarabuIdInput = document.getElementById("ayarabuIdInput") as HTMLInputElement;
+	const allianceSelect = document.getElementById("allianceSelect") as HTMLSelectElement;
 	const memberData: AllianceMemberForm = {
 		id: -1, // 新規追加のため仮のID
 		memberRole: "MEMBER",
 		discordMemberId: "",
 		discordName: "",
-		ayarabuId: "",
-		ayarabuName: ayarabuInput.value,
-		alliance: "NONE",
+		ayarabuId: ayarabuIdInput.value,
+		ayarabuName: ayarabuNameInput.value,
+		alliance: allianceSelect.value,
 		statementCount: 0,
 		createDate: "",
 		isBot: 0
@@ -323,8 +436,8 @@ async function fetchAndDisplayMember(): Promise<void> {
 		row.innerHTML = `
 	                    <td>${member.id}</td>
 						<td><select id="memberRoleSelect${member.id}">${roleOptions}</select></td>
-						<td>${member.discordMemberId}</td>
-						<td>${member.discordName}</td>
+						<td contenteditable="true">${member.discordMemberId}</td>
+						<td contenteditable="true">${member.discordName}</td>
 						<td contenteditable="true">${member.ayarabuId}</td>
 						<td contenteditable="true">${member.ayarabuName}</td>
 						<td><select id="memberAllianceSelect${member.id}">${allianceOptions}</select></td>
@@ -343,15 +456,14 @@ async function onSaveMember(): Promise<void> {
 	// 要素を一つずつ処理
 	for (let i = 1; i < tableRows.length; i++) {
 		const row: HTMLTableRowElement = tableRows.item(i) as HTMLTableRowElement; // または listItems[i]
-		const rowId: string = row.dataset.id + "";
 		const id: number = parseInt(row.cells[0].textContent || "0", 10);
 
 		const memberRoleElement: HTMLSelectElement = document.getElementById(`memberRoleSelect${id}`) as HTMLSelectElement;
-		const memberRoleStr :string= memberRoleElement.value;
+		const memberRoleStr: string = memberRoleElement.value;
 		const allianceElement = document.getElementById(`memberAllianceSelect${id}`) as HTMLSelectElement;
 		const allianceStr = allianceElement.value;
 
-		const updateMember: Member = {
+		const updateMember: AllianceMemberForm = {
 			id: id,
 			memberRole: memberRoleStr,
 			discordMemberId: row.cells[2].textContent || "",
@@ -364,7 +476,7 @@ async function onSaveMember(): Promise<void> {
 		};
 
 		console.log("updateMEmber:", updateMember);
-		await axios.put<Member>(`/member`, updateMember, {}).then(function(response) {
+		await axios.put<AllianceMemberForm>(`/member`, updateMember, {}).then(function(response) {
 			fetchAndDisplayMember();
 		});
 	}

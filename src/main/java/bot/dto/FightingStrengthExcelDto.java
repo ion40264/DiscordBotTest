@@ -1,9 +1,4 @@
-package bot.entity;
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+package bot.dto;
 
 import jp.highwide.common.excel.ExcelColumn;
 import jp.highwide.common.excel.ExcelEntity;
@@ -12,29 +7,23 @@ import jp.highwide.common.excel.ExcelEntity.Border;
 import lombok.Data;
 
 @Data
-@Entity
 @ExcelEntity(header = true, headerStyle = Align.ALIGN_CENTER, borderStyle = Border.STYLE2)
-public class AllianceMember {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+public class FightingStrengthExcelDto {
 	@ExcelColumn(columnIndex = 0)
 	private Integer id;
 	@ExcelColumn(columnIndex = 1)
-	private String memberRole;
+	private Integer memberId;
 	@ExcelColumn(columnIndex = 2)
-	private String discordMemberId;
+	private String ayarabuName;
 	@ExcelColumn(columnIndex = 3)
 	private String discordName;
 	@ExcelColumn(columnIndex = 4)
-	private String ayarabuId;
+	private String color;
 	@ExcelColumn(columnIndex = 5)
-	private String ayarabuName;
+	private Integer enemyLevel;
 	@ExcelColumn(columnIndex = 6)
-	private String alliance;
+	private Integer point;
 	@ExcelColumn(columnIndex = 7)
-	private Integer statementCount;
-	@ExcelColumn(columnIndex = 8)
-	private String createDate;
-	@ExcelColumn(columnIndex = 9)
-	private Integer bot;
+	private String updateDate;
+
 }

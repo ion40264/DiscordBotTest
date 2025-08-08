@@ -21,7 +21,7 @@ public class LoginUserDetailsService implements UserDetailsService {
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		log.error("✩✩ username=" + username);
+		log.info("ログイン username=" + username);
 		if (username == null || username.isEmpty()) {
 			throw new UsernameNotFoundException("ユーザー名が空です。");
 		}

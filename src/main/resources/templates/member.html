@@ -5,8 +5,8 @@
 	<meta charset="UTF-8">
 	<title>メンバー一覧</title>
 	<script type="module" src="./js/main.js"></script>
-	<meta name="_csrf" th:content="${_csrf.token}"/>
-	<meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+	<meta name="_csrf" th:content="${_csrf.token}" />
+	<meta name="_csrf_header" th:content="${_csrf.headerName}" />
 </head>
 
 <body>
@@ -35,10 +35,24 @@
 		ID:<input type="text" id="deleteInput"><input type="button" id="deleteButton" value="メンバー削除">
 	</form>
 	<form>
-		あやらぶ名:<input type="text" id="ayarabuInput"><input type="button" id="addButton" value="メンバー登録">
+		あやらぶ名:<input type="text" id="ayarabuNameInput">
+		あやらぶID:<input type="text" id="ayarabuIdInput">
+		同盟:<select id="allianceSelect"><option>HOKKORI</option><option>HONTO_HOKKORI</option><option></option>NONE</select>
+		<input type="button" id="addButton" value="メンバー登録">
 	</form>
+	<br>
+	<hr>
+	<input type="button" id="fightingStrengthDownloadButton" value="戦力エクセルファイルダウンロード">
+	<br>
+	<hr>
+	<form>
+		エクセルファイル：<input type="file" id="fightingStrengthFile"><br>
+		<input type="button" id="fightingStrengthUploadButton" value="アップロード"><br>
+	</form>
+	<br>
+	<hr>
+	<input type="button" id="fightingStrengthInitButton" value="戦力初期化">
+<br>
 </body>
 
 </html>
-
-

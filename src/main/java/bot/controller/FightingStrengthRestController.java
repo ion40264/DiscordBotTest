@@ -3,10 +3,7 @@ package bot.controller;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Date;
-import java.util.List;
 
-import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,53 +12,39 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import bot.DiscordBotTestApplication;
 import bot.dto.AllianceMemberDto;
-import bot.form.AllianceMemberForm;
 import bot.form.ExcelUploadForm;
+import bot.form.FightingStrengthForm;
+import bot.service.FightingStrengthService;
 import bot.service.MemberService;
 
 @RestController
-@RequestMapping(value = "/member", produces = MediaType.APPLICATION_JSON_VALUE)
-public class MemberRestController {
-	private static final Logger log = LoggerFactory.getLogger(MemberRestController.class);
+@RequestMapping(value = "/fightingStrength", produces = MediaType.APPLICATION_JSON_VALUE)
+public class FightingStrengthRestController {
+	Logger log = LoggerFactory.getLogger(FightingStrengthService.class);
+	@Autowired
+	private FightingStrengthService fightingStrengthService;
 	@Autowired
 	private MemberService memberService;
 
-	@GetMapping
-	public List<AllianceMemberDto> getAllMember() {
-		return memberService.getAllianceMemberDtoList();
+	@GetMapping("/init")
+	public void initFightingStrength() {
+		fightingStrengthService.init();
 	}
-
-	@PostMapping
-	public void postMember(@RequestBody AllianceMemberForm allianceMemberForm) {
-		ModelMapper modelMapper = new ModelMapper();
-		AllianceMemberDto allianceMemberDto = modelMapper.map(allianceMemberForm, AllianceMemberDto.class);
-		allianceMemberDto.setId(null);
-		allianceMemberDto.setCreateDate(DiscordBotTestApplication.sdf.format(new Date()));
-		memberService.addAllianceMemberDto(allianceMemberDto);
-	}
-	
 	@PutMapping
-	public void putMember(@RequestBody AllianceMemberForm allianceMemberForm) {
-//		log.info("メンバー更新="+allianceMemberForm);
-		ModelMapper modelMapper = new ModelMapper();
-		memberService.updateAllianceMemberDto(modelMapper.map(allianceMemberForm, AllianceMemberDto.class));
-	}
-
-	@DeleteMapping("/{id}")
-	public void deleteMember(@PathVariable Integer id) {
-		log.info("メンバー削除="+id);
-		memberService.removeAllianceMemberDto(id);
+	public void putFightingStrength(FightingStrengthForm fightingStrengthForm) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		String ayarabuName = authentication.getName();
+		AllianceMemberDto allianceMemberDto = memberService.getAllianceMemberDtoByAyarabuName(ayarabuName);
+		fightingStrengthService.updateFightingStrength(allianceMemberDto.getId(), fightingStrengthForm.getText());
 	}
 	@PostMapping("/excel")
 	public void uploadFile(ExcelUploadForm excelUploadForm) {
@@ -70,7 +53,7 @@ public class MemberRestController {
 			if (excelUploadForm.getMultipartFiles().length == 0)
 				return;
 			InputStream inputStream = excelUploadForm.getMultipartFiles()[0].getInputStream();
-			memberService.uploadExcel(inputStream);
+			fightingStrengthService.uploadExcel(inputStream);
 		} catch (Exception e) {
 			log.error("アップロードで失敗しました。excelUploadForm=" + excelUploadForm, e);
 		}
@@ -80,7 +63,7 @@ public class MemberRestController {
 	public ResponseEntity<Resource> downloadFile() {
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 		try {
-			memberService.downloadExcel().write(byteArrayOutputStream);
+			fightingStrengthService.downloadExcel().write(byteArrayOutputStream);
 		} catch (IOException e) {
 			log.error("エクセルファイルの出力に失敗しました。", e);
 			return ResponseEntity.internalServerError().build();
@@ -101,5 +84,4 @@ public class MemberRestController {
                 .headers(headers)
                 .body(resource);
 	}
-
 }

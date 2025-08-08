@@ -44,7 +44,7 @@ public class StartupRunner implements CommandLineRunner {
 			chatService.init();
 			discordModel.getHistory(100);
 
-			git.init();
+//			git.init();
 		} catch (Exception e) {
 			log.error("初期起動に失敗しました。終了します。", e);
 			System.exit(-1);
